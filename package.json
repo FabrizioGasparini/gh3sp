@@ -1,0 +1,28 @@
+{
+  "name": "gh3sp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "gh3sp": "./dist/gh3sp.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./dist/gh3sp.js"
+  },
+  "keywords": [],
+  "author": "gaspa",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^16.18.112",
+    "typescript": "^4.9.5"
+  },
+  "dependencies": {
+    "pkg": "^21.6.1"
+  },
+  "pkg": {
+    "targets": [
+      "node18-win-x64"
+    ]
+  }
+}
