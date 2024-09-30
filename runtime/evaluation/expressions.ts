@@ -52,12 +52,12 @@ export function evaluate_object_expression(obj: ObjectLiteral, env: Environment)
     const object = { type: "object", properties: new Map() } as ObjectValue;
     for (const { key, value } of obj.properties) {
         const runtimeVal = (value == undefined)
-            ? env.lookupVar(key)
-            : evaluate(value, env);
+        ? env.lookupVar(key)
+        : evaluate(value, env);
         
         object.properties.set(key, runtimeVal);
     }
-
+    
     return object
 }
 

@@ -5,7 +5,7 @@ fn add(a, b) {
 let obj = {
     x: 100,
     y: 30,
-    add,
+    aggiungi: add,
     test: {
         ciao: {
             cacca: 10,
@@ -20,4 +20,4 @@ let j = obj.x + obj.y
    multilinea */
 
 print(j)
-print(obj.add(obj.x - obj.test.ciao.cacca, obj.y), obj.test.ciao.culo, obj)
+print(obj)

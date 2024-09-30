@@ -70,14 +70,14 @@ export function tokenize(sourceCode: string): Token[] {
     while (src.length > 0) {
         if (issignlecomment(src))
         {
-            while (src[0] != "\n")
+            while (src.length > 0 && src[0] != "\n")
                 src.shift()
             
             src.shift()
         }
         else if (ismulticomment(src))
         {
-            while (src[0] + src[1] != "*/")
+            while (src.length > 0 && src[0] + src[1] != "*/")
                 src.shift()
             
             src.shift()
