@@ -1,0 +1,23 @@
+fn add(a, b) {
+    a + b
+}
+
+let obj = {
+    x: 100,
+    y: 30,
+    add,
+    test: {
+        ciao: {
+            cacca: 10,
+            culo: true
+        }
+    }
+}
+
+// commento singolo
+let j = obj.x + obj.y
+/* commento
+   multilinea */
+
+print(j)
+print(obj.add(obj.x - obj.test.ciao.cacca, obj.y), obj.test.ciao.culo, obj)
