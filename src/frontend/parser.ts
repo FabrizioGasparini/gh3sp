@@ -1,6 +1,6 @@
-import { CallExpression } from "./ast";
-import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast";
-import { tokenize, Token, TokenType } from "./lexer";
+import { CallExpression, CompoundAssignmentExpression, IfExpression, StringLiteral } from "./ast.ts";
+import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
+import { tokenize, Token, TokenType } from "./lexer.ts";
 
 export default class Parser {
     private tokens: Token[] = [];
@@ -56,6 +56,12 @@ export default class Parser {
             
             case TokenType.Fn:
                 return this.parse_function_declaration();
+
+            case TokenType.If:
+                return this.parse_if_expression();
+            
+            case TokenType.For:
+                return this.parse_for_expression();
             
             default:
                 return this.parse_expression()
@@ -111,7 +117,7 @@ export default class Parser {
             } as VariableDeclaration
         }
 
-        this.expect(TokenType.Equals, "Expected equals token following identifier in variable declaration.")
+        this.expect(TokenType.Equal, "Expected equals token following identifier in variable declaration.")
 
         const declaration = {
             kind: "VariableDeclaration",
@@ -123,14 +129,85 @@ export default class Parser {
         return declaration
     }
 
+    
+
+
     private parse_expression(): Expression {
-        return this.parse_assignment_expression();
+        return this.parse_compound_assignment_expression();
+    }
+
+    private parse_if_expression(): Expression {
+        this.eat(); // Go past 'if' token
+
+        this.expect(TokenType.OpenParen, "Exprected '(' after if keyword")
+        
+        const condition = this.parse_expression()
+        this.expect(TokenType.CloseParen, "Exprected ')' after if condition")
+        
+        this.expect(TokenType.OpenBrace, "Exprected '{' after if condition")
+        
+        const thenBranch: Statement[] = [];
+        while (this.at().type != TokenType.CloseBrace)
+            thenBranch.push(this.parse_statement())
+        
+        this.expect(TokenType.CloseBrace, "Expected '}' at the end of if block")
+        
+        const elseBranch: Statement[] | undefined = [];
+        if (this.at().type == TokenType.Else)
+        {
+            this.eat()
+            
+            this.expect(TokenType.OpenBrace, "Exprected '{' after if condition")
+            
+            while (this.at().type != TokenType.CloseBrace)
+                elseBranch.push(this.parse_statement())
+            
+            this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block")
+        }
+
+        return {
+            kind: "IfExpression",
+            condition,
+            then: thenBranch,
+            else: elseBranch
+        } as IfExpression;
+    }
+
+    private parse_for_expression(): Expression {
+        return {} as Expression
+    }
+
+    // Order Of Operations (Expressions)
+    // ===================
+    // Assignment Expression
+    // Equality Expression
+    // Object Expression
+    // Additive Expression
+    // Multiplicative Expression
+    // Exponential Expression
+    // Call Member Expression
+    // Member Expression
+    // Primary Expression
+
+
+    private parse_compound_assignment_expression(): Expression {
+        const left = this.parse_assignment_expression();
+
+        if (this.at().type == TokenType.BinaryOperator && this.at().value.includes("=")) {
+            const operator = this.eat().value;
+
+            const value = this.parse_assignment_expression();
+
+            return { kind: "CompoundAssignmentExpression", assigne: left, value, operator } as CompoundAssignmentExpression;
+        }
+
+        return left;
     }
 
     private parse_assignment_expression(): Expression {
-        const left = this.parse_object_expression();
+        const left = this.parse_equality_expression();
 
-        if (this.at().type == TokenType.Equals) {
+        if (this.at().type == TokenType.Equal) {
             this.eat();
 
             const value = this.parse_assignment_expression();
@@ -139,6 +216,32 @@ export default class Parser {
         }
 
         return left;
+    }
+
+
+    private parse_equality_expression(): Expression {
+        let left = this.parse_object_expression();
+
+        while (
+            this.at().type == TokenType.EqualEqual ||
+            this.at().type == TokenType.NotEqual ||
+            this.at().type == TokenType.LessThanOrEqual ||
+            this.at().type == TokenType.GreaterThenOrEqual ||
+            this.at().type == TokenType.LessThan ||
+            this.at().type == TokenType.GreaterThan
+        ) {
+            const operator = this.eat().value;
+            const right = this.parse_object_expression();
+
+            left = {
+                kind: "BinaryExpression",
+                left,
+                right,
+                operator
+            } as BinaryExpression
+        }
+
+        return left
     }
 
     private parse_object_expression(): Expression {
@@ -174,7 +277,7 @@ export default class Parser {
 
     private parse_additive_expression(): Expression {
         let left = this.parse_multiplicative_expression();
-
+        
         while (this.at().value == "+" || this.at().value == "-") {
             const operator = this.eat().value;
             const right = this.parse_multiplicative_expression();
@@ -311,7 +414,14 @@ export default class Parser {
                     kind: "NumericLiteral",
                     value: parseFloat(this.eat().value)
                 } as NumericLiteral
-            
+
+            case TokenType.String: {
+                return {
+                    kind: "StringLiteral",
+                    value: this.eat().value
+                } as StringLiteral
+            }
+
             case TokenType.OpenParen: {
                 this.eat(); // Go past parenthesis
                 const value = this.parse_expression()

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { run } from "./main";
+import { run } from "./main.ts";
 import { readFileSync } from 'node:fs';
 import process from "node:process";
 

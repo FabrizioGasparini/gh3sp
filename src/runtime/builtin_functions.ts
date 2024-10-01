@@ -1,5 +1,5 @@
-import { FunctionValue, ObjectValue } from "./values";
-import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values";
+import { FunctionValue, ObjectValue } from "./values.ts";
+import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
 
 export function timeFunction() {
     return MK_NUMBER(Date.now());
@@ -20,6 +20,7 @@ function parse(node: RuntimeValue) {
     switch (node.type)
     {
         case "number":
+        case "string":
         case "boolean":
         case "null":
             return node.value
@@ -29,6 +30,9 @@ function parse(node: RuntimeValue) {
             return parse_function(node as FunctionValue)
         case "native-function":
             return "Node Type not implemented yet: " + node.type
+        
+        default:
+            return node
     }
 }
 

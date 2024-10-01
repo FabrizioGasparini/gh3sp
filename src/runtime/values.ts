@@ -1,10 +1,11 @@
-import { Statement } from "../frontend/ast";
-import Environment from "./environments";
+import { Statement } from "../frontend/ast.ts";
+import Environment from "./environments.ts";
 
 export type ValueType =
     "null" |
     "number" |
     "boolean" |
+    "string" |
     "object" |
     "native-function" |
     "function";
@@ -29,6 +30,14 @@ export interface NumberValue extends RuntimeValue {
 }
 export function MK_NUMBER(n = 0) {
     return { type: "number", value: n } as NumberValue;
+} 
+
+export interface StringValue extends RuntimeValue {
+    type: "string";
+    value: string;
+}
+export function MK_STRING(s = "") {
+    return { type: "string", value: s } as StringValue;
 } 
 
 export interface BoolValue extends RuntimeValue {

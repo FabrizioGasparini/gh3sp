@@ -1,7 +1,7 @@
-import { FunctionDeclaration, Program, VariableDeclaration } from "../../frontend/ast";
-import Environment from "../environments";
-import { evaluate } from "../interpreter";
-import { RuntimeValue, MK_NULL, FunctionValue } from "../values";
+import { FunctionDeclaration, Program, VariableDeclaration } from "../../frontend/ast.ts";
+import Environment from "../environments.ts";
+import { evaluate } from "../interpreter.ts";
+import { RuntimeValue, MK_NULL, FunctionValue } from "../values.ts";
 
 export function evaluate_program(program: Program, env: Environment): RuntimeValue {
     let lastEvaluated: RuntimeValue = MK_NULL()

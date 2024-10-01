@@ -1,5 +1,5 @@
-import { print, timeFunction } from "./builtin_functions";
-import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values";
+import { print, timeFunction } from "./builtin_functions.ts";
+import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
 
 export function createGlobalEnvironment() {
     const env = new Environment();
@@ -48,7 +48,7 @@ export default class Environment {
         env.variables.set(varname, value);
         return value;
     }
-
+    
     public lookupVar(varname: string): RuntimeValue {
         const env = this.resolve(varname);
 

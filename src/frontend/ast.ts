@@ -6,13 +6,18 @@ export type NodeType =
 
     // Expressions
     "AssignmentExpression" |
+    "CompoundAssignmentExpression" |
     "BinaryExpression" |
+    "IfExpression" |
+    "ForExpression" |
     "MemberExpression" |
     "CallExpression" |
     // Literals
     "ObjectLiteral" |
     "Property" |
     "NumericLiteral" |
+    "StringLiteral" |
+    "BooleanLiteral" |
     "Identifier";
 
 export interface Statement {
@@ -47,13 +52,19 @@ export interface AssignmentExpression extends Expression {
     value: Expression;
 }
 
+export interface CompoundAssignmentExpression extends Expression {
+    kind: "CompoundAssignmentExpression";
+    assigne: Expression;
+    value: Expression;
+    operator: string;
+}
+
 export interface BinaryExpression extends Expression { 
     kind: "BinaryExpression";
     left: Expression;
     right: Expression;
     operator: string;
 }
-
 export interface CallExpression extends Expression { 
     kind: "CallExpression";
     args: Expression[];
@@ -67,6 +78,20 @@ export interface MemberExpression extends Expression {
     computed: boolean;
 }
 
+export interface IfExpression extends Expression { 
+    kind: "IfExpression";
+    condition: Expression;
+    then: Statement[];
+    else?: Statement[];
+}
+
+export interface ForExpression extends Expression { 
+    kind: "ForExpression";
+    assignment: AssignmentExpression,
+    condition: Expression,
+
+}
+
 export interface Identifier extends Expression {
     kind: "Identifier";
     symbol: string;
@@ -75,6 +100,16 @@ export interface Identifier extends Expression {
 export interface NumericLiteral extends Expression {
     kind: "NumericLiteral";
     value: number
+}
+
+export interface StringLiteral extends Expression {
+    kind: "StringLiteral";
+    value: string
+}
+
+export interface BooleanLiteral extends Expression {
+    kind: "BooleanLiteral";
+    value: boolean
 }
 
 export interface ObjectLiteral extends Expression {
