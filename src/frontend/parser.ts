@@ -128,6 +128,9 @@ export default class Parser {
             value: this.parse_expression(),
         } as VariableDeclaration
 
+        if (this.at().type == TokenType.Semicolon)
+            this.eat()
+
         return declaration
     }
 
@@ -143,13 +146,25 @@ export default class Parser {
         const condition = this.parse_expression()
         this.expect(TokenType.CloseParen, "Exprected ')' following if condition")
         
-        this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
-        
         const thenBranch: Statement[] = [];
-        while (this.at().type != TokenType.CloseBrace)
+        if (this.at().type == TokenType.OpenBrace)
+        {
+            this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
+            
+            while (this.at().type != TokenType.CloseBrace)
+                thenBranch.push(this.parse_statement())    
+
+            this.expect(TokenType.CloseBrace, "Expected '}' at the end of if block")
+            
+        }
+        else 
+        {
             thenBranch.push(this.parse_statement())
-        
-        this.expect(TokenType.CloseBrace, "Expected '}' at the end of if block")
+
+            if(this.at().type != TokenType.Else)
+                this.expect(TokenType.Semicolon, "Expected ';' at the end of if statement")
+        }
+
         
         const elseBranch: Statement[] | undefined = [];
         if (this.at().type == TokenType.Else)
@@ -157,17 +172,25 @@ export default class Parser {
             this.eat()
             
             if (this.at().type == TokenType.If)
-            {
-                elseBranch.push(this.parse_if_expression())
-            }
+                elseBranch.push(this.parse_if_expression())  
             else
             {
-                this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
-                
-                while (this.at().type != TokenType.CloseBrace)
-                    elseBranch.push(this.parse_statement())
-                
-                this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block")
+                if (this.at().type == TokenType.OpenBrace)
+                {
+                    this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
+                    
+                    while (this.at().type != TokenType.CloseBrace)
+                        elseBranch.push(this.parse_statement())
+                    
+                    this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block")
+                }
+                else
+                {
+                    elseBranch.push(this.parse_statement());  
+                    
+                    if(this.at().type != TokenType.Else)
+                        this.expect(TokenType.Semicolon, "Expected ';' at the end of else statement")
+                }
             }
 
         }

@@ -6,12 +6,26 @@ export function timeFunction() {
 }
 
 export function str(args: RuntimeValue[]) {
-    return MK_STRING((args[0].value).toString())
+    try
+        {return MK_STRING((args[0].value).toString())}
+    catch
+        {throw `Invalid argument passed inside 'str' function`}
 }
 
 export function int(args: RuntimeValue[]) {
-    return MK_NUMBER(parseInt(args[0].value))
+    try
+        {return MK_NUMBER(parseInt(args[0].value))}
+    catch
+        {throw `Invalid argument passed inside 'int' function`}
 }
+
+export function type(args: RuntimeValue[]) {
+    try
+        {return MK_STRING(args[0].type);}
+    catch
+    { throw `Invalid argument passed inside 'type' function` }
+}
+
 
 export function print(args: RuntimeValue[]) {
     const params = []

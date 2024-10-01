@@ -1,4 +1,4 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, ForExpression, Identifier, IfExpression, MemberExpression, ObjectLiteral, VariableDeclaration, WhileExpression } from "../../frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, ForExpression, Identifier, IfExpression, MemberExpression, ObjectLiteral, StringLiteral, VariableDeclaration, WhileExpression } from "../../frontend/ast.ts";
 import Environment from "../environments.ts";
 import { evaluate } from "../interpreter.ts";
 import { BoolValue, FunctionValue, MK_BOOL, StringValue } from "../values.ts";
@@ -104,6 +104,9 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
 
     const op = binop.operator
 
+    if (left == undefined || right == undefined)
+        throw 'Missing required parameter'
+
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^") {
         if (left.type == "number" && right.type == "number")
             return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
@@ -197,12 +200,17 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
     for (const prop of props)
         objProps = (objProps.get(prop.symbol) as ObjectValue).properties
     
+    console.log(member.property)
 
-    const prop = objProps.get((member.property as Identifier).symbol);
-    if (prop == undefined)
-        return MK_NULL()
+    let propKey: string;
+    if (member.property.kind == "Identifier" && !member.computed)
+        propKey = (member.property as Identifier).symbol;
+    else if (member.property.kind == "StringLiteral" && member.computed)
+        propKey = (member.property as StringLiteral).value;
+    else
+        throw 'Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)
 
-    return prop
+    return objProps.get(propKey)!
 }
 
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {

@@ -1,4 +1,4 @@
-import { int, print, str, timeFunction } from "./builtin_functions.ts";
+import { int, print, str, timeFunction, type } from "./builtin_functions.ts";
 import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
 
 export function createGlobalEnvironment() {
@@ -9,7 +9,10 @@ export function createGlobalEnvironment() {
 
     // Declare native methods
     env.declareVar("print", MK_NATIVE_FUNCTION(print), true)
+    env.declareVar("type", MK_NATIVE_FUNCTION(type), true)
+    
     env.declareVar("time", MK_NATIVE_FUNCTION(timeFunction), true)
+    
     env.declareVar("str", MK_NATIVE_FUNCTION(str), true)
     env.declareVar("int", MK_NATIVE_FUNCTION(int), true)
 
