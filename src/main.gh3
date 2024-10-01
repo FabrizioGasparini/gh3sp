@@ -1,0 +1,9 @@
+let i = 20
+
+if (i < 5) {
+    print("< 5")
+} else if (i > 5) {
+    print("> 5")
+} else if(i > 10) {
+    print("> 10")
+}

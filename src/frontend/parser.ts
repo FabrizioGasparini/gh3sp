@@ -156,12 +156,20 @@ export default class Parser {
         {
             this.eat()
             
-            this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
-            
-            while (this.at().type != TokenType.CloseBrace)
-                elseBranch.push(this.parse_statement())
-            
-            this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block")
+            if (this.at().type == TokenType.If)
+            {
+                elseBranch.push(this.parse_if_expression())
+            }
+            else
+            {
+                this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
+                
+                while (this.at().type != TokenType.CloseBrace)
+                    elseBranch.push(this.parse_statement())
+                
+                this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block")
+            }
+
         }
 
         return {
