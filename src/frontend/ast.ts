@@ -10,6 +10,7 @@ export type NodeType =
     "BinaryExpression" |
     "IfExpression" |
     "ForExpression" |
+    "WhileExpression" |
     "MemberExpression" |
     "CallExpression" |
     // Literals
@@ -85,11 +86,19 @@ export interface IfExpression extends Expression {
     else?: Statement[];
 }
 
+export interface WhileExpression extends Expression { 
+    kind: "WhileExpression";
+    condition: Expression;
+    body: Statement[];
+}
+
 export interface ForExpression extends Expression { 
     kind: "ForExpression";
-    assignment: AssignmentExpression,
-    condition: Expression,
-
+    assignment: AssignmentExpression | VariableDeclaration;
+    declared: boolean
+    condition: Expression;
+    compoundAssignment: CompoundAssignmentExpression;
+    body: Statement[];
 }
 
 export interface Identifier extends Expression {

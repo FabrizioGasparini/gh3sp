@@ -11,6 +11,7 @@ export enum TokenType {
     If,
     Else,
     For,
+    While,
 
     // Grouping & Operators
     BinaryOperator,
@@ -49,7 +50,8 @@ const KEYWORDS: Record<string, TokenType> = {
     fn: TokenType.Fn,
     if: TokenType.If,
     else: TokenType.Else,
-    for: TokenType.For
+    for: TokenType.For,
+    while: TokenType.While,
 }
 
 const singleCharTokens: Record<string, TokenType> = {

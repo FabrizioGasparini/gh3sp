@@ -1,7 +1,7 @@
 import { RuntimeValue, MK_NUMBER, MK_STRING } from "./values.ts"
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfExpression, CompoundAssignmentExpression } from "../frontend/ast.ts"
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfExpression, CompoundAssignmentExpression, ForExpression, WhileExpression } from "../frontend/ast.ts"
 import Environment from "./environments.ts";
-import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_if_expression, evaluate_compound_assignment_expression } from "./evaluation/expressions.ts";
+import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_if_expression, evaluate_compound_assignment_expression, evaluate_for_expression, evaluate_while_expression } from "./evaluation/expressions.ts";
 import { evaluate_function_declaration, evaluate_program, evaluate_variable_declaration } from "./evaluation/statements.ts";
 
 export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
@@ -44,6 +44,12 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         
         case "IfExpression":
             return evaluate_if_expression(astNode as IfExpression, env)
+        
+        case "ForExpression":
+            return evaluate_for_expression(astNode as ForExpression, env)
+
+        case "WhileExpression":
+            return evaluate_while_expression(astNode as WhileExpression, env)
             
         default:
             console.log(astNode)

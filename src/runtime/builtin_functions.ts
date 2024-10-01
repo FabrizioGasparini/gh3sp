@@ -1,8 +1,16 @@
-import { FunctionValue, ObjectValue } from "./values.ts";
+import { FunctionValue, MK_STRING, ObjectValue } from "./values.ts";
 import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
 
 export function timeFunction() {
     return MK_NUMBER(Date.now());
+}
+
+export function str(args: RuntimeValue[]) {
+    return MK_STRING((args[0].value).toString())
+}
+
+export function int(args: RuntimeValue[]) {
+    return MK_NUMBER(parseInt(args[0].value))
 }
 
 export function print(args: RuntimeValue[]) {
@@ -35,7 +43,6 @@ function parse(node: RuntimeValue) {
             return node
     }
 }
-
 
 function parse_object(obj: ObjectValue) {
     const object: {[key: string]: RuntimeValue} = {}

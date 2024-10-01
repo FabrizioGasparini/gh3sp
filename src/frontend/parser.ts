@@ -1,4 +1,4 @@
-import { CallExpression, CompoundAssignmentExpression, IfExpression, StringLiteral } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForExpression, IfExpression, StringLiteral, WhileExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -62,6 +62,8 @@ export default class Parser {
             
             case TokenType.For:
                 return this.parse_for_expression();
+            case TokenType.While:
+                return this.parse_while_expression();
             
             default:
                 return this.parse_expression()
@@ -129,9 +131,6 @@ export default class Parser {
         return declaration
     }
 
-    
-
-
     private parse_expression(): Expression {
         return this.parse_compound_assignment_expression();
     }
@@ -139,12 +138,12 @@ export default class Parser {
     private parse_if_expression(): Expression {
         this.eat(); // Go past 'if' token
 
-        this.expect(TokenType.OpenParen, "Exprected '(' after if keyword")
+        this.expect(TokenType.OpenParen, "Exprected '(' following if keyword")
         
         const condition = this.parse_expression()
-        this.expect(TokenType.CloseParen, "Exprected ')' after if condition")
+        this.expect(TokenType.CloseParen, "Exprected ')' following if condition")
         
-        this.expect(TokenType.OpenBrace, "Exprected '{' after if condition")
+        this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
         
         const thenBranch: Statement[] = [];
         while (this.at().type != TokenType.CloseBrace)
@@ -157,7 +156,7 @@ export default class Parser {
         {
             this.eat()
             
-            this.expect(TokenType.OpenBrace, "Exprected '{' after if condition")
+            this.expect(TokenType.OpenBrace, "Exprected '{' following if condition")
             
             while (this.at().type != TokenType.CloseBrace)
                 elseBranch.push(this.parse_statement())
@@ -174,7 +173,73 @@ export default class Parser {
     }
 
     private parse_for_expression(): Expression {
-        return {} as Expression
+        this.eat() // Go past for keyword
+
+        this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
+        
+        let assignment: Statement;
+        let declared: boolean;
+        if (this.at().type == TokenType.Let) {
+            assignment = this.parse_variable_declaration()
+            declared = true;
+        } else if (this.at().type == TokenType.Const) {
+            this.eat()
+            throw `Invalid variable usage: Cannot reassign a constant variable '${this.at().value}' inside a for loop.`;
+        } else {
+            assignment = this.parse_expression()
+            declared = false;
+        }
+          
+        
+        this.expect(TokenType.Semicolon, "Exprected ';' following for assignment")
+        const condition = this.parse_expression()
+        
+        this.expect(TokenType.Semicolon, "Exprected ';' following for condition")
+        
+        const compoundAssignment = this.parse_expression()
+        
+        this.expect(TokenType.CloseParen, "Exprected ')' following for compound assignment")
+
+        this.expect(TokenType.OpenBrace, "Exprected '{' following for compound assignment")
+
+        const body: Statement[] = [];
+        while (this.at().type != TokenType.CloseBrace)
+            body.push(this.parse_statement())
+        
+        this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block")
+
+        return {
+            kind: "ForExpression",
+            assignment,
+            declared,
+            condition,
+            compoundAssignment,
+            body
+        } as ForExpression
+    }
+
+    private parse_while_expression(): Expression {
+        this.eat() // Go past for keyword
+
+        this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
+        
+        const condition = this.parse_expression()
+                
+        this.expect(TokenType.CloseParen, "Exprected ')' following for compound assignment")
+
+        this.expect(TokenType.OpenBrace, "Exprected '{' following for compound assignment")
+
+        const body: Statement[] = [];
+        while (this.at().type != TokenType.CloseBrace)
+            body.push(this.parse_statement())
+        
+        this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block")
+
+        return {
+            kind: "WhileExpression",
+            condition,
+            body
+        } as WhileExpression
     }
 
     // Order Of Operations (Expressions)
@@ -188,7 +253,6 @@ export default class Parser {
     // Call Member Expression
     // Member Expression
     // Primary Expression
-
 
     private parse_compound_assignment_expression(): Expression {
         const left = this.parse_assignment_expression();
@@ -217,7 +281,6 @@ export default class Parser {
 
         return left;
     }
-
 
     private parse_equality_expression(): Expression {
         let left = this.parse_object_expression();

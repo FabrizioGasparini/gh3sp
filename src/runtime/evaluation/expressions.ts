@@ -1,4 +1,4 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, IfExpression, MemberExpression, ObjectLiteral } from "../../frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, ForExpression, Identifier, IfExpression, MemberExpression, ObjectLiteral, VariableDeclaration, WhileExpression } from "../../frontend/ast.ts";
 import Environment from "../environments.ts";
 import { evaluate } from "../interpreter.ts";
 import { BoolValue, FunctionValue, MK_BOOL, StringValue } from "../values.ts";
@@ -59,7 +59,6 @@ function evaluate_mixed_string_numeric_binary_expression(string: StringValue, nu
 
     return { value: result, type: "string" } as StringValue;
 }
-
 
 function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
     switch (operator)
@@ -234,23 +233,23 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
     throw "Cannot call value that is not a function: " + JSON.stringify(fn)
 }
 
-export function evaluate_if_expression(binop: IfExpression, env: Environment): RuntimeValue {
-    const condition = evaluate(binop.condition, env);
+export function evaluate_if_expression(node: IfExpression, env: Environment): RuntimeValue {
+    const condition = evaluate(node.condition, env);
     
     if (condition.value == true)
     {
         let result: RuntimeValue = MK_NULL();
-        for (const statement of binop.then)
+        for (const statement of node.then)
             result = evaluate(statement, env);
 
         return result;
     }
     else
     {
-        if (binop.else)
+        if (node.else)
         {
             let result: RuntimeValue = MK_NULL();
-            for (const statement of binop.else)
+            for (const statement of node.else)
                 result = evaluate(statement, env);
 
             return result;
@@ -258,4 +257,47 @@ export function evaluate_if_expression(binop: IfExpression, env: Environment): R
     }
 
     return MK_NULL();
+}
+
+export function evaluate_for_expression(node: ForExpression, env: Environment): RuntimeValue {
+    let assignment: VariableDeclaration | AssignmentExpression;
+    if (node.declared)
+        assignment = node.assignment as VariableDeclaration
+    else
+        assignment = node.assignment as AssignmentExpression;
+ 
+    evaluate(assignment, env);
+    
+    let condition = evaluate(node.condition, env);
+    let result: RuntimeValue = MK_NULL();
+    while (condition.value)
+    {
+        for (const statement of node.body)
+            result = evaluate(statement, env);
+
+        evaluate(node.compoundAssignment, env)
+        condition = evaluate(node.condition, env)
+    }
+
+    return result
+}
+
+export function evaluate_while_expression(node: WhileExpression, env: Environment): RuntimeValue {
+    const maxIterations = 10000;
+    let iterations = 0;
+
+    let condition = evaluate(node.condition, env);
+    let result: RuntimeValue = MK_NULL();
+    while (condition.value)
+    {
+        if (iterations++ >= maxIterations)
+            throw "Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000).";
+        
+        for (const statement of node.body)
+            result = evaluate(statement, env);
+
+        condition = evaluate(node.condition, env)
+    }
+
+    return result
 }
