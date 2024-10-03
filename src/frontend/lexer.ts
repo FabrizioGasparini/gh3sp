@@ -16,7 +16,7 @@ export enum TokenType {
     // Grouping & Operators
     BinaryOperator,
     Equal,
-    
+
     // Comparison Operators
     EqualEqual,
     NotEqual,
@@ -27,19 +27,18 @@ export enum TokenType {
 
     Dot,
     Comma,
-    
+
     Colon,
     Semicolon,
-    
+
     OpenParen, // (
     CloseParen, // )
     OpenBracket, // [
     CloseBracket, // ]
     OpenBrace, // {
     CloseBrace, // }
-    
-    
-    EOF // End of file
+
+    EOF, // End of file
 }
 
 // Tokens Records
@@ -52,7 +51,7 @@ const KEYWORDS: Record<string, TokenType> = {
     else: TokenType.Else,
     for: TokenType.For,
     while: TokenType.While,
-}
+};
 
 const singleCharTokens: Record<string, TokenType> = {
     ".": TokenType.Dot,
@@ -73,8 +72,8 @@ const singleCharTokens: Record<string, TokenType> = {
     "%": TokenType.BinaryOperator,
     "^": TokenType.BinaryOperator,
     "<": TokenType.LessThan,
-    ">": TokenType.GreaterThan
-}
+    ">": TokenType.GreaterThan,
+};
 
 const doubleCharTokens: Record<string, TokenType> = {
     "==": TokenType.EqualEqual,
@@ -86,8 +85,8 @@ const doubleCharTokens: Record<string, TokenType> = {
     "*=": TokenType.BinaryOperator,
     "/=": TokenType.BinaryOperator,
     "%=": TokenType.BinaryOperator,
-    "^=": TokenType.BinaryOperator
-}
+    "^=": TokenType.BinaryOperator,
+};
 
 // Token Type
 export interface Token {
@@ -102,11 +101,11 @@ function token(value = "", type: TokenType): Token {
 // Check Functions
 
 function isalpha(src: string) {
-    return src.toUpperCase() != src.toLocaleLowerCase()
-} 
+    return src.toUpperCase() != src.toLocaleLowerCase();
+}
 
 function isskippable(src: string) {
-    return src == " " || src == "\n" ||src == "\t" || src == "\r"
+    return src == " " || src == "\n" || src == "\t" || src == "\r";
 }
 
 function issignlecomment(src: string[]) {
@@ -119,36 +118,35 @@ function ismulticomment(src: string[]) {
 
 function isnum(src: string) {
     const c = src.charCodeAt(0);
-    const bounds = ['0'.charCodeAt(0), '9'.charCodeAt(0)]
-    
-    return (c >= bounds[0] && c <= bounds[1]);
+    const bounds = ["0".charCodeAt(0), "9".charCodeAt(0)];
+
+    return c >= bounds[0] && c <= bounds[1];
 }
 
 function isdecimal(src: string[]) {
-    return (src[0] == "." && isnum(src[1]));
+    return src[0] == "." && isnum(src[1]);
 }
 
 function isdoublechartoken(src: string[]) {
-    return (src[0] + (src[1])) in doubleCharTokens;
+    return src[0] + src[1] in doubleCharTokens;
 }
 
 // Parsing Functions
 
 function parseString(src: string[]): string {
-    const quoteType = src.shift();  // Removes quote (" or ')
+    const quoteType = src.shift(); // Removes quote (" or ')
     let str = "";
-    
-    while (src.length > 0 && src[0] !== quoteType)
-        str += src.shift();
-    
-    src.shift();  // Removes closing quote
+
+    while (src.length > 0 && src[0] !== quoteType) str += src.shift();
+
+    src.shift(); // Removes closing quote
     return str;
 }
 
 function parseNumber(src: string[]): string {
     let num = "";
     while (src.length > 0 && (isnum(src[0]) || isdecimal(src))) {
-        if (isdecimal(src) && num.includes(".")) throw 'Invalid number format.';
+        if (isdecimal(src) && num.includes(".")) throw "Invalid number format.";
         num += src.shift();
     }
     return num;
@@ -156,72 +154,53 @@ function parseNumber(src: string[]): string {
 
 function parseIdentifierOrKeyword(src: string[]): Token {
     let ident = "";
-    while (src.length > 0 && isalpha(src[0]))
-        ident += src.shift();
-    
-    const reserved = KEYWORDS[ident];
-    if (typeof reserved === "number")
-        return token(ident, reserved);
-    else
-        return token(ident, TokenType.Identifier);
+    while (src.length > 0 && isalpha(src[0])) ident += src.shift();
 
+    const reserved = KEYWORDS[ident];
+    if (typeof reserved === "number") return token(ident, reserved);
+    else return token(ident, TokenType.Identifier);
 }
 
 function skipSingleLineComment(src: string[]): void {
     while (src.length > 0 && src[0] !== "\n") src.shift();
-    src.shift();  // Rimuovi il newline finale
+    src.shift(); // Rimuovi il newline finale
 }
 
 function skipMultiLineComment(src: string[]): void {
     while (src.length > 0 && src[0] + src[1] !== "*/") src.shift();
-    src.shift();  // Rimuovi "*"
-    src.shift();  // Rimuovi "/"
+    src.shift(); // Rimuovi "*"
+    src.shift(); // Rimuovi "/"
 }
 
 function parseDoubleCharToken(src: string[]): Token {
-    const value = (src[0] + src[1]);
-    const type = doubleCharTokens[value]
-    
-    src.shift()
-    src.shift()
-    
+    const value = src[0] + src[1];
+    const type = doubleCharTokens[value];
+
+    src.shift();
+    src.shift();
+
     return token(value, type);
 }
 
 export function tokenize(sourceCode: string): Token[] {
-    const tokens = new Array<Token>()
+    const tokens = new Array<Token>();
     const src = sourceCode.split("");
-    
+
     while (src.length > 0) {
-        const current = src[0]
-        
-        if (issignlecomment(src))
-            skipSingleLineComment(src)
-        
-        else if (ismulticomment(src))
-            skipMultiLineComment(src)
-        
-        else if (isdoublechartoken(src))
-            tokens.push(parseDoubleCharToken(src))
-        
-        else if (current == '"' || current == "'") 
-            tokens.push(token(parseString(src), TokenType.String));
-        
-        else if (current in singleCharTokens) 
-            tokens.push(token(src.shift(), singleCharTokens[current]));
-        
-        else if (isnum(current))
-            tokens.push(token(parseNumber(src), TokenType.Number));
-        
-        else if (isalpha(current))
-            tokens.push(parseIdentifierOrKeyword(src))
-    
-        else if (isskippable(current))
-            src.shift() // Skip character
-        else
-            throw 'Unrecognized character found in source: ' + JSON.stringify(current).charCodeAt(0);
+        const current = src[0];
+
+        if (issignlecomment(src)) skipSingleLineComment(src);
+        else if (ismulticomment(src)) skipMultiLineComment(src);
+        else if (isdoublechartoken(src)) tokens.push(parseDoubleCharToken(src));
+        else if (current == '"' || current == "'") tokens.push(token(parseString(src), TokenType.String));
+        else if (current in singleCharTokens) tokens.push(token(src.shift(), singleCharTokens[current]));
+        else if (isnum(current)) tokens.push(token(parseNumber(src), TokenType.Number));
+        else if (isalpha(current)) tokens.push(parseIdentifierOrKeyword(src));
+        else if (isskippable(current)) src.shift();
+        // Skip character
+        else throw "Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0);
     }
 
-    tokens.push(token("EndOfFile", TokenType.EOF))
-    return tokens
+    tokens.push(token("EndOfFile", TokenType.EOF));
+    return tokens;
 }

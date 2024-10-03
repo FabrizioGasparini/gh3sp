@@ -12,7 +12,7 @@ function timeFunction() {
 }
 function str(args) {
     try {
-        return (0, values_1.MK_STRING)((args[0].value).toString());
+        return (0, values_1.MK_STRING)(args[0].value.toString());
     }
     catch (_a) {
         throw `Invalid argument passed inside 'str' function`;
@@ -40,7 +40,6 @@ function print(args) {
         const test = JSON.parse(JSON.stringify(parse(arg)));
         params.push(test);
     }
-    ;
     console.log(...params);
     return (0, values_2.MK_NULL)();
 }

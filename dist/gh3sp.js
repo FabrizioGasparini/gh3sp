@@ -12,5 +12,5 @@ if (!fileName) {
     console.error("Usage: gh3sp <file.gh3>");
     node_process_1.default.exit(1);
 }
-const code = (0, node_fs_1.readFileSync)(fileName, 'utf-8');
+const code = (0, node_fs_1.readFileSync)(fileName, "utf-8");
 (0, main_1.run)(code);

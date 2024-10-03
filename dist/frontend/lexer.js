@@ -36,7 +36,7 @@ var TokenType;
     TokenType[TokenType["CloseBracket"] = 25] = "CloseBracket";
     TokenType[TokenType["OpenBrace"] = 26] = "OpenBrace";
     TokenType[TokenType["CloseBrace"] = 27] = "CloseBrace";
-    TokenType[TokenType["EOF"] = 28] = "EOF"; // End of file
+    TokenType[TokenType["EOF"] = 28] = "EOF";
 })(TokenType || (exports.TokenType = TokenType = {}));
 // Tokens Records
 const KEYWORDS = {
@@ -67,7 +67,7 @@ const singleCharTokens = {
     "%": TokenType.BinaryOperator,
     "^": TokenType.BinaryOperator,
     "<": TokenType.LessThan,
-    ">": TokenType.GreaterThan
+    ">": TokenType.GreaterThan,
 };
 const doubleCharTokens = {
     "==": TokenType.EqualEqual,
@@ -79,7 +79,7 @@ const doubleCharTokens = {
     "*=": TokenType.BinaryOperator,
     "/=": TokenType.BinaryOperator,
     "%=": TokenType.BinaryOperator,
-    "^=": TokenType.BinaryOperator
+    "^=": TokenType.BinaryOperator,
 };
 function token(value = "", type) {
     return { value, type };
@@ -99,14 +99,14 @@ function ismulticomment(src) {
 }
 function isnum(src) {
     const c = src.charCodeAt(0);
-    const bounds = ['0'.charCodeAt(0), '9'.charCodeAt(0)];
-    return (c >= bounds[0] && c <= bounds[1]);
+    const bounds = ["0".charCodeAt(0), "9".charCodeAt(0)];
+    return c >= bounds[0] && c <= bounds[1];
 }
 function isdecimal(src) {
-    return (src[0] == "." && isnum(src[1]));
+    return src[0] == "." && isnum(src[1]);
 }
 function isdoublechartoken(src) {
-    return (src[0] + (src[1])) in doubleCharTokens;
+    return src[0] + src[1] in doubleCharTokens;
 }
 // Parsing Functions
 function parseString(src) {
@@ -121,7 +121,7 @@ function parseNumber(src) {
     let num = "";
     while (src.length > 0 && (isnum(src[0]) || isdecimal(src))) {
         if (isdecimal(src) && num.includes("."))
-            throw 'Invalid number format.';
+            throw "Invalid number format.";
         num += src.shift();
     }
     return num;
@@ -148,7 +148,7 @@ function skipMultiLineComment(src) {
     src.shift(); // Rimuovi "/"
 }
 function parseDoubleCharToken(src) {
-    const value = (src[0] + src[1]);
+    const value = src[0] + src[1];
     const type = doubleCharTokens[value];
     src.shift();
     src.shift();
@@ -174,9 +174,10 @@ function tokenize(sourceCode) {
         else if (isalpha(current))
             tokens.push(parseIdentifierOrKeyword(src));
         else if (isskippable(current))
-            src.shift(); // Skip character
+            src.shift();
+        // Skip character
         else
-            throw 'Unrecognized character found in source: ' + JSON.stringify(current).charCodeAt(0);
+            throw "Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0);
     }
     tokens.push(token("EndOfFile", TokenType.EOF));
     return tokens;

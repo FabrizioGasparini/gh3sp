@@ -1,14 +1,7 @@
-import { Statement } from "../frontend/ast.ts";
-import Environment from "./environments.ts";
+import { Statement } from "../frontend/ast";
+import Environment from "./environments";
 
-export type ValueType =
-    "null" |
-    "number" |
-    "boolean" |
-    "string" |
-    "object" |
-    "native-function" |
-    "function";
+export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "function";
 
 export interface RuntimeValue {
     type: ValueType;
@@ -22,7 +15,7 @@ export interface NullValue extends RuntimeValue {
 }
 export function MK_NULL() {
     return { type: "null", value: null } as NullValue;
-} 
+}
 
 export interface NumberValue extends RuntimeValue {
     type: "number";
@@ -30,7 +23,7 @@ export interface NumberValue extends RuntimeValue {
 }
 export function MK_NUMBER(n = 0) {
     return { type: "number", value: n } as NumberValue;
-} 
+}
 
 export interface StringValue extends RuntimeValue {
     type: "string";
@@ -38,14 +31,14 @@ export interface StringValue extends RuntimeValue {
 }
 export function MK_STRING(s = "") {
     return { type: "string", value: s } as StringValue;
-} 
+}
 
 export interface BoolValue extends RuntimeValue {
     type: "boolean";
     value: boolean;
 }
 export function MK_BOOL(b = false) {
-    return { type: "boolean", value: b } as BoolValue
+    return { type: "boolean", value: b } as BoolValue;
 }
 
 export interface ObjectValue extends RuntimeValue {
@@ -56,14 +49,13 @@ export interface ObjectValue extends RuntimeValue {
 export type FunctionCall = (args: RuntimeValue[], env: Environment) => RuntimeValue;
 
 export function MK_NATIVE_FUNCTION(call: FunctionCall) {
-    return { type: "native-function", call } as NativeFunctionValue
+    return { type: "native-function", call } as NativeFunctionValue;
 }
 
 export interface NativeFunctionValue extends RuntimeValue {
     type: "native-function";
     call: FunctionCall;
 }
-
 
 export interface FunctionValue extends RuntimeValue {
     type: "function";

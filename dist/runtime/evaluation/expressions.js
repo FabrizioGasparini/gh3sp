@@ -10,9 +10,6 @@ exports.evaluate_compound_assignment_expression = evaluate_compound_assignment_e
 exports.evaluate_object_expression = evaluate_object_expression;
 exports.evaluate_member_expression = evaluate_member_expression;
 exports.evaluate_call_expression = evaluate_call_expression;
-exports.evaluate_if_expression = evaluate_if_expression;
-exports.evaluate_for_expression = evaluate_for_expression;
-exports.evaluate_while_expression = evaluate_while_expression;
 const environments_1 = __importDefault(require("../environments"));
 const interpreter_1 = require("../interpreter");
 const values_1 = require("../values");
@@ -102,7 +99,7 @@ function evaluate_binary_expression(binop, env) {
     const right = (0, interpreter_1.evaluate)(binop.right, env);
     const op = binop.operator;
     if (left == undefined || right == undefined)
-        throw 'Missing required parameter';
+        throw "Missing required parameter";
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^") {
         if (left.type == "number" && right.type == "number")
             return evaluate_numeric_binary_expression(left, right, op);
@@ -123,13 +120,13 @@ function evaluate_identifier(ident, env) {
 }
 function evaluate_assignment_expression(node, env) {
     if (node.assigne.kind != "Identifier")
-        throw 'Invalid assignment expression ' + JSON.stringify(node.assigne);
+        throw "Invalid assignment expression " + JSON.stringify(node.assigne);
     const varname = node.assigne.symbol;
     return env.assignVar(varname, (0, interpreter_1.evaluate)(node.value, env));
 }
 function evaluate_compound_assignment_expression(node, env) {
     if (node.assigne.kind != "Identifier")
-        throw 'Invalid compound assignment expression ' + JSON.stringify(node.assigne);
+        throw "Invalid compound assignment expression " + JSON.stringify(node.assigne);
     const varname = node.assigne.symbol;
     const currentValue = env.lookupVar(varname);
     const value = (0, interpreter_1.evaluate)(node.value, env);
@@ -152,9 +149,7 @@ function evaluate_compound_assignment_expression(node, env) {
 function evaluate_object_expression(obj, env) {
     const object = { type: "object", properties: new Map() };
     for (const { key, value } of obj.properties) {
-        const runtimeVal = (value == undefined)
-            ? env.lookupVar(key)
-            : (0, interpreter_1.evaluate)(value, env);
+        const runtimeVal = value == undefined ? env.lookupVar(key) : (0, interpreter_1.evaluate)(value, env);
         object.properties.set(key, runtimeVal);
     }
     return object;
@@ -203,53 +198,4 @@ function evaluate_call_expression(call, env) {
         return result;
     }
     throw "Cannot call value that is not a function: " + JSON.stringify(fn);
-}
-function evaluate_if_expression(node, env) {
-    const condition = (0, interpreter_1.evaluate)(node.condition, env);
-    if (condition.value == true) {
-        let result = (0, values_2.MK_NULL)();
-        for (const statement of node.then)
-            result = (0, interpreter_1.evaluate)(statement, env);
-        return result;
-    }
-    else {
-        if (node.else) {
-            let result = (0, values_2.MK_NULL)();
-            for (const statement of node.else)
-                result = (0, interpreter_1.evaluate)(statement, env);
-            return result;
-        }
-    }
-    return (0, values_2.MK_NULL)();
-}
-function evaluate_for_expression(node, env) {
-    let assignment;
-    if (node.declared)
-        assignment = node.assignment;
-    else
-        assignment = node.assignment;
-    (0, interpreter_1.evaluate)(assignment, env);
-    let condition = (0, interpreter_1.evaluate)(node.condition, env);
-    let result = (0, values_2.MK_NULL)();
-    while (condition.value) {
-        for (const statement of node.body)
-            result = (0, interpreter_1.evaluate)(statement, env);
-        (0, interpreter_1.evaluate)(node.compoundAssignment, env);
-        condition = (0, interpreter_1.evaluate)(node.condition, env);
-    }
-    return result;
-}
-function evaluate_while_expression(node, env) {
-    const maxIterations = 10000;
-    let iterations = 0;
-    let condition = (0, interpreter_1.evaluate)(node.condition, env);
-    let result = (0, values_2.MK_NULL)();
-    while (condition.value) {
-        if (iterations++ >= maxIterations)
-            throw "Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000).";
-        for (const statement of node.body)
-            result = (0, interpreter_1.evaluate)(statement, env);
-        condition = (0, interpreter_1.evaluate)(node.condition, env);
-    }
-    return result;
 }

@@ -30,12 +30,12 @@ function evaluate(astNode, env) {
             return (0, statements_1.evaluate_function_declaration)(astNode, env);
         case "MemberExpression":
             return (0, expressions_1.evaluate_member_expression)(astNode, env);
-        case "IfExpression":
-            return (0, expressions_1.evaluate_if_expression)(astNode, env);
-        case "ForExpression":
-            return (0, expressions_1.evaluate_for_expression)(astNode, env);
-        case "WhileExpression":
-            return (0, expressions_1.evaluate_while_expression)(astNode, env);
+        case "IfStatement":
+            return (0, statements_1.evaluate_if_statement)(astNode, env);
+        case "ForStatement":
+            return (0, statements_1.evaluate_for_statement)(astNode, env);
+        case "WhileStatement":
+            return (0, statements_1.evaluate_while_statement)(astNode, env);
         default:
             console.log(astNode);
             throw `This AST Node has not yet been setup for interpretation. ${JSON.stringify(astNode)}`;

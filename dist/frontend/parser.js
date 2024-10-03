@@ -19,7 +19,7 @@ class Parser {
     expect(type, err) {
         const prev = this.tokens.shift();
         if (!prev || prev.type != type) {
-            throw `Parser Error:\n ${err}. ${prev}. Expecting: ${type}`;
+            throw `Parser Error:\n ${err}. ${JSON.stringify(prev)}. Expecting: ${type}`;
         }
         return prev;
     }
@@ -44,11 +44,11 @@ class Parser {
             case lexer_1.TokenType.Fn:
                 return this.parse_function_declaration();
             case lexer_1.TokenType.If:
-                return this.parse_if_expression();
+                return this.parse_if_statement();
             case lexer_1.TokenType.For:
-                return this.parse_for_expression();
+                return this.parse_for_statement();
             case lexer_1.TokenType.While:
-                return this.parse_while_expression();
+                return this.parse_while_statement();
             default:
                 return this.parse_expression();
         }
@@ -86,7 +86,7 @@ class Parser {
             return {
                 kind: "VariableDeclaration",
                 identifier,
-                constant: false
+                constant: false,
             };
         }
         this.expect(lexer_1.TokenType.Equal, "Expected equals token following identifier in variable declaration.");
@@ -96,21 +96,19 @@ class Parser {
             constant: isConstant,
             value: this.parse_expression(),
         };
-        if (this.at().type == lexer_1.TokenType.Semicolon)
-            this.eat();
         return declaration;
     }
     parse_expression() {
         return this.parse_compound_assignment_expression();
     }
-    parse_if_expression() {
+    parse_if_statement() {
         this.eat(); // Go past 'if' token
-        this.expect(lexer_1.TokenType.OpenParen, "Exprected '(' following if keyword");
+        this.expect(lexer_1.TokenType.OpenParen, "Expected '(' following if keyword");
         const condition = this.parse_expression();
-        this.expect(lexer_1.TokenType.CloseParen, "Exprected ')' following if condition");
+        this.expect(lexer_1.TokenType.CloseParen, "Expected ')' following if condition");
         const thenBranch = [];
         if (this.at().type == lexer_1.TokenType.OpenBrace) {
-            this.expect(lexer_1.TokenType.OpenBrace, "Exprected '{' following if condition");
+            this.eat();
             while (this.at().type != lexer_1.TokenType.CloseBrace)
                 thenBranch.push(this.parse_statement());
             this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of if block");
@@ -124,10 +122,10 @@ class Parser {
         if (this.at().type == lexer_1.TokenType.Else) {
             this.eat();
             if (this.at().type == lexer_1.TokenType.If)
-                elseBranch.push(this.parse_if_expression());
+                elseBranch.push(this.parse_if_statement());
             else {
                 if (this.at().type == lexer_1.TokenType.OpenBrace) {
-                    this.expect(lexer_1.TokenType.OpenBrace, "Exprected '{' following if condition");
+                    this.eat();
                     while (this.at().type != lexer_1.TokenType.CloseBrace)
                         elseBranch.push(this.parse_statement());
                     this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of else block");
@@ -140,13 +138,13 @@ class Parser {
             }
         }
         return {
-            kind: "IfExpression",
+            kind: "IfStatement",
             condition,
             then: thenBranch,
-            else: elseBranch
+            else: elseBranch,
         };
     }
-    parse_for_expression() {
+    parse_for_statement() {
         this.eat(); // Go past for keyword
         this.expect(lexer_1.TokenType.OpenParen, "Expected '(' following for keyword");
         let assignment;
@@ -160,42 +158,54 @@ class Parser {
             throw `Invalid variable usage: Cannot reassign a constant variable '${this.at().value}' inside a for loop.`;
         }
         else {
-            assignment = this.parse_expression();
+            assignment = this.parse_assignment_expression();
             declared = false;
         }
-        this.expect(lexer_1.TokenType.Semicolon, "Exprected ';' following for assignment");
+        this.expect(lexer_1.TokenType.Semicolon, "Expected ';' following for assignment");
         const condition = this.parse_expression();
-        this.expect(lexer_1.TokenType.Semicolon, "Exprected ';' following for condition");
-        const compoundAssignment = this.parse_expression();
-        this.expect(lexer_1.TokenType.CloseParen, "Exprected ')' following for compound assignment");
-        this.expect(lexer_1.TokenType.OpenBrace, "Exprected '{' following for compound assignment");
+        this.expect(lexer_1.TokenType.Semicolon, "Expected ';' following for condition");
+        const compoundAssignment = this.parse_compound_assignment_expression();
+        this.expect(lexer_1.TokenType.CloseParen, "Expected ')' following for compound assignment");
         const body = [];
-        while (this.at().type != lexer_1.TokenType.CloseBrace)
+        if (this.at().type == lexer_1.TokenType.OpenBrace) {
+            this.eat(); // Go past {
+            while (this.at().type != lexer_1.TokenType.CloseBrace)
+                body.push(this.parse_statement());
+            this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of for block");
+        }
+        else {
             body.push(this.parse_statement());
-        this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of for block");
+            this.expect(lexer_1.TokenType.Semicolon, "Expected ';' at the end of for declaration");
+        }
         return {
-            kind: "ForExpression",
+            kind: "ForStatement",
             assignment,
             declared,
             condition,
             compoundAssignment,
-            body
+            body,
         };
     }
-    parse_while_expression() {
+    parse_while_statement() {
         this.eat(); // Go past for keyword
         this.expect(lexer_1.TokenType.OpenParen, "Expected '(' following for keyword");
         const condition = this.parse_expression();
-        this.expect(lexer_1.TokenType.CloseParen, "Exprected ')' following for compound assignment");
-        this.expect(lexer_1.TokenType.OpenBrace, "Exprected '{' following for compound assignment");
+        this.expect(lexer_1.TokenType.CloseParen, "Expected ')' following for compound assignment");
         const body = [];
-        while (this.at().type != lexer_1.TokenType.CloseBrace)
+        if (this.at().type == lexer_1.TokenType.OpenBrace) {
+            this.eat(); // Go past {
+            while (this.at().type != lexer_1.TokenType.CloseBrace)
+                body.push(this.parse_statement());
+            this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of for block");
+        }
+        else {
             body.push(this.parse_statement());
-        this.expect(lexer_1.TokenType.CloseBrace, "Expected '}' at the end of for block");
+            this.expect(lexer_1.TokenType.Semicolon, "Expected ';' at the end of while declaration");
+        }
         return {
-            kind: "WhileExpression",
+            kind: "WhileStatement",
             condition,
-            body
+            body,
         };
     }
     // Order Of Operations (Expressions)
@@ -229,19 +239,14 @@ class Parser {
     }
     parse_equality_expression() {
         let left = this.parse_object_expression();
-        while (this.at().type == lexer_1.TokenType.EqualEqual ||
-            this.at().type == lexer_1.TokenType.NotEqual ||
-            this.at().type == lexer_1.TokenType.LessThanOrEqual ||
-            this.at().type == lexer_1.TokenType.GreaterThenOrEqual ||
-            this.at().type == lexer_1.TokenType.LessThan ||
-            this.at().type == lexer_1.TokenType.GreaterThan) {
+        while (this.at().type == lexer_1.TokenType.EqualEqual || this.at().type == lexer_1.TokenType.NotEqual || this.at().type == lexer_1.TokenType.LessThanOrEqual || this.at().type == lexer_1.TokenType.GreaterThenOrEqual || this.at().type == lexer_1.TokenType.LessThan || this.at().type == lexer_1.TokenType.GreaterThan) {
             const operator = this.eat().value;
             const right = this.parse_object_expression();
             left = {
                 kind: "BinaryExpression",
                 left,
                 right,
-                operator
+                operator,
             };
         }
         return left;
@@ -309,7 +314,7 @@ class Parser {
                 kind: "BinaryExpression",
                 left,
                 right,
-                operator
+                operator,
             };
         }
         return left;
@@ -324,7 +329,7 @@ class Parser {
         let call_expression = {
             kind: "CallExpression",
             caller,
-            args: this.parse_args()
+            args: this.parse_args(),
         };
         if (this.at().type == lexer_1.TokenType.OpenParen)
             call_expression = this.parse_call_expression(call_expression);
@@ -332,16 +337,14 @@ class Parser {
     }
     parse_args() {
         this.expect(lexer_1.TokenType.OpenParen, "Expected open parenthesis.");
-        const args = this.at().type == lexer_1.TokenType.CloseParen
-            ? []
-            : this.parse_args_list();
+        const args = this.at().type == lexer_1.TokenType.CloseParen ? [] : this.parse_args_list();
         this.expect(lexer_1.TokenType.CloseParen, "Missing closing parenthesis inside argument list.");
         return args;
     }
     parse_args_list() {
-        const args = [this.parse_assignment_expression()];
+        const args = [this.parse_expression()];
         while (this.at().type == lexer_1.TokenType.Comma && this.eat())
-            args.push(this.parse_assignment_expression());
+            args.push(this.parse_expression());
         return args;
     }
     parse_member_expression() {
@@ -354,7 +357,7 @@ class Parser {
                 computed = false;
                 property = this.parse_primary_expression();
                 if (property.kind != "Identifier")
-                    throw 'Cannot use dot operator without an identifier on the right.';
+                    throw "Cannot use dot operator without an identifier on the right.";
             }
             else {
                 computed = true;
@@ -365,7 +368,7 @@ class Parser {
                 kind: "MemberExpression",
                 object,
                 property,
-                computed
+                computed,
             };
         }
         return object;
@@ -376,17 +379,17 @@ class Parser {
             case lexer_1.TokenType.Identifier:
                 return {
                     kind: "Identifier",
-                    symbol: this.eat().value
+                    symbol: this.eat().value,
                 };
             case lexer_1.TokenType.Number:
                 return {
                     kind: "NumericLiteral",
-                    value: parseFloat(this.eat().value)
+                    value: parseFloat(this.eat().value),
                 };
             case lexer_1.TokenType.String: {
                 return {
                     kind: "StringLiteral",
-                    value: this.eat().value
+                    value: this.eat().value,
                 };
             }
             case lexer_1.TokenType.OpenParen: {

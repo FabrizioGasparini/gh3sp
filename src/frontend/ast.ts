@@ -1,25 +1,25 @@
 export type NodeType =
     //Statements
-    "Program" |
-    "VariableDeclaration" |
-    "FunctionDeclaration" |
+    | "Program"
+    | "VariableDeclaration"
+    | "FunctionDeclaration"
+    | "IfStatement"
+    | "ForStatement"
+    | "WhileStatement"
 
     // Expressions
-    "AssignmentExpression" |
-    "CompoundAssignmentExpression" |
-    "BinaryExpression" |
-    "IfExpression" |
-    "ForExpression" |
-    "WhileExpression" |
-    "MemberExpression" |
-    "CallExpression" |
+    | "AssignmentExpression"
+    | "CompoundAssignmentExpression"
+    | "BinaryExpression"
+    | "MemberExpression"
+    | "CallExpression"
     // Literals
-    "ObjectLiteral" |
-    "Property" |
-    "NumericLiteral" |
-    "StringLiteral" |
-    "BooleanLiteral" |
-    "Identifier";
+    | "ObjectLiteral"
+    | "Property"
+    | "NumericLiteral"
+    | "StringLiteral"
+    | "BooleanLiteral"
+    | "Identifier";
 
 export interface Statement {
     kind: NodeType;
@@ -29,7 +29,6 @@ export interface Program extends Statement {
     kind: "Program";
     body: Statement[];
 }
-
 
 export interface VariableDeclaration extends Statement {
     kind: "VariableDeclaration";
@@ -45,7 +44,7 @@ export interface FunctionDeclaration extends Statement {
     body: Statement[];
 }
 
-export interface Expression extends Statement { }
+export interface Expression extends Statement {}
 
 export interface AssignmentExpression extends Expression {
     kind: "AssignmentExpression";
@@ -60,42 +59,42 @@ export interface CompoundAssignmentExpression extends Expression {
     operator: string;
 }
 
-export interface BinaryExpression extends Expression { 
+export interface BinaryExpression extends Expression {
     kind: "BinaryExpression";
     left: Expression;
     right: Expression;
     operator: string;
 }
-export interface CallExpression extends Expression { 
+export interface CallExpression extends Expression {
     kind: "CallExpression";
     args: Expression[];
     caller: Expression;
 }
 
-export interface MemberExpression extends Expression { 
+export interface MemberExpression extends Expression {
     kind: "MemberExpression";
     object: Expression;
     property: Expression;
     computed: boolean;
 }
 
-export interface IfExpression extends Expression { 
-    kind: "IfExpression";
+export interface IfStatement extends Expression {
+    kind: "IfStatement";
     condition: Expression;
     then: Statement[];
     else?: Statement[];
 }
 
-export interface WhileExpression extends Expression { 
-    kind: "WhileExpression";
+export interface WhileStatement extends Expression {
+    kind: "WhileStatement";
     condition: Expression;
     body: Statement[];
 }
 
-export interface ForExpression extends Expression { 
-    kind: "ForExpression";
+export interface ForStatement extends Expression {
+    kind: "ForStatement";
     assignment: AssignmentExpression | VariableDeclaration;
-    declared: boolean
+    declared: boolean;
     condition: Expression;
     compoundAssignment: CompoundAssignmentExpression;
     body: Statement[];
@@ -108,17 +107,17 @@ export interface Identifier extends Expression {
 
 export interface NumericLiteral extends Expression {
     kind: "NumericLiteral";
-    value: number
+    value: number;
 }
 
 export interface StringLiteral extends Expression {
     kind: "StringLiteral";
-    value: string
+    value: string;
 }
 
 export interface BooleanLiteral extends Expression {
     kind: "BooleanLiteral";
-    value: boolean
+    value: boolean;
 }
 
 export interface ObjectLiteral extends Expression {
