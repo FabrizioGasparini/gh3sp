@@ -1,7 +1,7 @@
-import { Statement } from "../frontend/ast";
-import Environment from "./environments";
+import { Statement } from "../frontend/ast.ts";
+import Environment from "./environments.ts";
 
-export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "function";
+export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "list" | "function";
 
 export interface RuntimeValue {
     type: ValueType;
@@ -46,15 +46,22 @@ export interface ObjectValue extends RuntimeValue {
     properties: Map<string, RuntimeValue>;
 }
 
+export interface ListValue extends RuntimeValue {
+    type: "list";
+    value: RuntimeValue[];
+    name?: string;
+}
+
 export type FunctionCall = (args: RuntimeValue[], env: Environment) => RuntimeValue;
 
 export function MK_NATIVE_FUNCTION(call: FunctionCall) {
-    return { type: "native-function", call } as NativeFunctionValue;
+    return { type: "native-function", call, name: call.name } as NativeFunctionValue;
 }
 
 export interface NativeFunctionValue extends RuntimeValue {
     type: "native-function";
     call: FunctionCall;
+    name: string;
 }
 
 export interface FunctionValue extends RuntimeValue {

@@ -1,8 +1,8 @@
-import { RuntimeValue, MK_NUMBER, MK_STRING } from "./values";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, CompoundAssignmentExpression, IfStatement, ForStatement, WhileStatement } from "../frontend/ast";
-import Environment from "./environments";
-import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression } from "./evaluation/expressions";
-import { evaluate_for_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements";
+import { RuntimeValue, MK_NUMBER, MK_STRING } from "./values.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement } from "../frontend/ast.ts";
+import Environment from "./environments.ts";
+import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression } from "./evaluation/expressions.ts";
+import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
 
 export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     switch (astNode.kind) {
@@ -50,6 +50,12 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
 
         case "WhileStatement":
             return evaluate_while_statement(astNode as WhileStatement, env);
+
+        case "ForEachStatement":
+            return evaluate_foreach_statement(astNode as ForEachStatement, env);
+
+        case "ListLiteral":
+            return evaluate_list_expression(astNode as ListLiteral, env);
 
         default:
             console.log(astNode);

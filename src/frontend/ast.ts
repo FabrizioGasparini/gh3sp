@@ -5,6 +5,7 @@ export type NodeType =
     | "FunctionDeclaration"
     | "IfStatement"
     | "ForStatement"
+    | "ForEachStatement"
     | "WhileStatement"
 
     // Expressions
@@ -13,12 +14,14 @@ export type NodeType =
     | "BinaryExpression"
     | "MemberExpression"
     | "CallExpression"
+
     // Literals
     | "ObjectLiteral"
     | "Property"
     | "NumericLiteral"
     | "StringLiteral"
     | "BooleanLiteral"
+    | "ListLiteral"
     | "Identifier";
 
 export interface Statement {
@@ -78,25 +81,33 @@ export interface MemberExpression extends Expression {
     computed: boolean;
 }
 
-export interface IfStatement extends Expression {
+export interface IfStatement extends Statement {
     kind: "IfStatement";
     condition: Expression;
     then: Statement[];
     else?: Statement[];
 }
 
-export interface WhileStatement extends Expression {
+export interface WhileStatement extends Statement {
     kind: "WhileStatement";
     condition: Expression;
     body: Statement[];
 }
 
-export interface ForStatement extends Expression {
+export interface ForStatement extends Statement {
     kind: "ForStatement";
     assignment: AssignmentExpression | VariableDeclaration;
     declared: boolean;
     condition: Expression;
     compoundAssignment: CompoundAssignmentExpression;
+    body: Statement[];
+}
+
+export interface ForEachStatement extends Statement {
+    kind: "ForEachStatement";
+    element: Identifier;
+    declared: boolean;
+    list: Identifier;
     body: Statement[];
 }
 
@@ -123,6 +134,11 @@ export interface BooleanLiteral extends Expression {
 export interface ObjectLiteral extends Expression {
     kind: "ObjectLiteral";
     properties: Property[];
+}
+
+export interface ListLiteral extends Expression {
+    kind: "ListLiteral";
+    values: Expression[];
 }
 
 export interface Property extends Expression {

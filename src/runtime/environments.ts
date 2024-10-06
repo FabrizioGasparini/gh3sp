@@ -1,20 +1,15 @@
-import { int, print, str, timeFunction, type } from "./builtin_functions";
-import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values";
+import { buildInFunctions } from "./builtin_functions.ts";
+import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
 
 export function createGlobalEnvironment() {
     const env = new Environment();
+
     env.declareVar("true", MK_BOOL(true), true);
     env.declareVar("false", MK_BOOL(false), true);
     env.declareVar("null", MK_NULL(), true);
 
     // Declare native methods
-    env.declareVar("print", MK_NATIVE_FUNCTION(print), true);
-    env.declareVar("type", MK_NATIVE_FUNCTION(type), true);
-
-    env.declareVar("time", MK_NATIVE_FUNCTION(timeFunction), true);
-
-    env.declareVar("str", MK_NATIVE_FUNCTION(str), true);
-    env.declareVar("int", MK_NATIVE_FUNCTION(int), true);
+    for (const func of buildInFunctions) env.declareVar(func.name, MK_NATIVE_FUNCTION(func), true);
 
     return env;
 }

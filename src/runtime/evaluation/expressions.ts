@@ -1,8 +1,8 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, MemberExpression, ObjectLiteral, StringLiteral } from "../../frontend/ast";
-import Environment from "../environments";
-import { evaluate } from "../interpreter";
-import { BoolValue, FunctionValue, MK_BOOL, StringValue } from "../values";
-import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral } from "../../frontend/ast.ts";
+import Environment from "../environments.ts";
+import { evaluate } from "../interpreter.ts";
+import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values.ts";
+import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values.ts";
 
 function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
     let result: number = 0;
@@ -13,23 +13,23 @@ function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValu
             break;
 
         case "-":
-            result = left.value + right.value;
+            result = left.value - right.value;
             break;
 
         case "*":
-            result = left.value + right.value;
+            result = left.value * right.value;
             break;
 
         case "/":
-            result = left.value + right.value;
+            result = left.value / right.value;
             break;
 
         case "%":
-            result = left.value + right.value;
+            result = left.value % right.value;
             break;
 
         case "^":
-            result = left.value + right.value;
+            result = left.value ^ right.value;
             break;
     }
 
@@ -52,6 +52,19 @@ function evaluate_mixed_string_numeric_binary_expression(string: StringValue, nu
     else throw "Invalid operation between string and number: '" + operator + "'";
 
     return { value: result, type: "string" } as StringValue;
+}
+
+function evaluate_list_binary_expression(left: ListValue, right: ListValue, operator: string): ListValue {
+    switch (operator) {
+        case "+":
+            return {
+                type: "list",
+                value: right.value.concat(left.value),
+            } as ListValue;
+
+        default:
+            throw "Invalid operation '" + operator + "' between lists.";
+    }
 }
 
 function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
@@ -104,6 +117,7 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
         else if (left.type == "string" && right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, op);
         else if (left.type == "string" && right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, op);
         else if (left.type == "number" && right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, op);
+        else if (left.type == "list" && right.type == "list") return evaluate_list_binary_expression(right as ListValue, left as ListValue, op);
     } else if (op == "==" || op == "!=" || op == "<=" || op == ">=" || op == "<" || op == ">") return evaluate_comparison_binary_expression(left, right, op);
 
     return MK_NULL();
@@ -115,10 +129,17 @@ export function evaluate_identifier(ident: Identifier, env: Environment): Runtim
 }
 
 export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
-    if (node.assigne.kind != "Identifier") throw "Invalid assignment expression " + JSON.stringify(node.assigne);
+    if (node.assigne.kind == "Identifier") {
+        const varname = (node.assigne as Identifier).symbol;
+        return env.assignVar(varname, evaluate(node.value, env));
+    } else if (node.assigne.kind == "MemberExpression") {
+        const varname = ((node.assigne as MemberExpression).object as Identifier).symbol;
+        const list = env.lookupVar(varname) as ListValue;
+        const idx = evaluate((node.assigne as MemberExpression).property, env) as NumberValue;
+        list.value[idx.value] = evaluate(node.value, env);
 
-    const varname = (node.assigne as Identifier).symbol;
-    return env.assignVar(varname, evaluate(node.value, env));
+        return env.assignVar(varname, list);
+    } else throw "Invalid assignment expression " + JSON.stringify(node.assigne);
 }
 
 export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
@@ -157,28 +178,59 @@ export function evaluate_object_expression(obj: ObjectLiteral, env: Environment)
 
 export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
     let object = member.object;
-    const props: Identifier[] = [];
-    while (object.kind == "MemberExpression") {
-        const obj = object as MemberExpression;
 
-        props.push(obj.property as Identifier);
-        object = obj.object;
+    const props = [];
+    // This part is just for objects \\
+    // ============================= \\
+    if (object.kind == "MemberExpression") {
+        while (object.kind == "MemberExpression") {
+            const obj = object as MemberExpression;
+
+            props.push(obj.property);
+            object = obj.object;
+        }
+        props.reverse();
     }
-    props.reverse();
+    // ============================= \\
 
-    //const props = (env.lookupVar(varname) as ObjectValue).properties
     const varname = (object as Identifier).symbol;
-    let objProps = (env.lookupVar(varname) as ObjectValue).properties;
-    for (const prop of props) objProps = (objProps.get(prop.symbol) as ObjectValue).properties;
+    const variable = env.lookupVar(varname);
 
-    console.log(member.property);
+    if (variable.type == "object") {
+        let objProps = (variable as ObjectValue).properties;
+        for (const prop of props) {
+            if (member.computed) {
+                if (objProps.get((prop as StringLiteral).value)) objProps = (objProps.get((prop as StringLiteral).value) as ObjectValue).properties;
+                else if (objProps.get(env.lookupVar((prop as Identifier).symbol).value)) objProps = (objProps.get(env.lookupVar((prop as Identifier).symbol).value) as ObjectValue).properties;
+            } else {
+                if (objProps.get((prop as Identifier).symbol)) objProps = (objProps.get((prop as Identifier).symbol) as ObjectValue).properties;
+            }
+        }
 
-    let propKey: string;
-    if (member.property.kind == "Identifier" && !member.computed) propKey = (member.property as Identifier).symbol;
-    else if (member.property.kind == "StringLiteral" && member.computed) propKey = (member.property as StringLiteral).value;
-    else throw 'Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property);
+        let propKey: string;
 
-    return objProps.get(propKey)!;
+        if (member.computed && member.property.kind == "Identifier") member.property = { kind: "StringLiteral", value: env.lookupVar((member.property as Identifier).symbol).value } as StringLiteral;
+
+        if (!member.computed) propKey = (member.property as Identifier).symbol;
+        else propKey = (member.property as StringLiteral).value;
+
+        if (!propKey) throw 'Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property);
+        if (!objProps.get(propKey)) throw "Invalid object key access.";
+
+        return objProps.get(propKey)!;
+    } else if (variable.type == "list") {
+        if (!member.computed) throw "Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property);
+
+        if (member.property.kind != "NumericLiteral") throw "Invalid list index. Expected valid index (e.g. list[idx: number]), but received" + JSON.stringify(member.property);
+
+        const list = variable as ListValue;
+        const index = (evaluate(member.property, env) as NumberValue).value;
+        if (index < 0 || index > list.value.length - 1) throw "Invalid list index. Index must be between 0 and " + (list.value.length - 1);
+
+        return list.value[index];
+    }
+
+    return MK_NULL();
 }
 
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {
@@ -206,4 +258,14 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
     }
 
     throw "Cannot call value that is not a function: " + JSON.stringify(fn);
+}
+
+export function evaluate_list_expression(list: ListLiteral, env: Environment): RuntimeValue {
+    const ls = { type: "list", value: [] } as ListValue;
+
+    for (const value of list.values) {
+        ls.value.push(evaluate(value, env));
+    }
+
+    return ls;
 }

@@ -1,7 +1,7 @@
-import { AssignmentExpression, ForStatement, FunctionDeclaration, IfStatement, Program, VariableDeclaration, WhileStatement } from "../../frontend/ast";
-import Environment from "../environments";
-import { evaluate } from "../interpreter";
-import { RuntimeValue, MK_NULL, FunctionValue } from "../values";
+import { AssignmentExpression, ForEachStatement, ForStatement, FunctionDeclaration, IfStatement, Program, VariableDeclaration, WhileStatement } from "../../frontend/ast.ts";
+import Environment from "../environments.ts";
+import { evaluate } from "../interpreter.ts";
+import { RuntimeValue, MK_NULL, FunctionValue, ListValue } from "../values.ts";
 
 export function evaluate_program(program: Program, env: Environment): RuntimeValue {
     let lastEvaluated: RuntimeValue = MK_NULL();
@@ -16,6 +16,8 @@ export function evaluate_program(program: Program, env: Environment): RuntimeVal
 export function evaluate_variable_declaration(declaration: VariableDeclaration, env: Environment): RuntimeValue {
     const value = declaration.value ? evaluate(declaration.value, env) : MK_NULL();
 
+    if (value.type == "list") (value as ListValue).name = declaration.identifier;
+
     return env.declareVar(declaration.identifier, value, declaration.constant);
 }
 
@@ -28,7 +30,8 @@ export function evaluate_function_declaration(declaration: FunctionDeclaration, 
         body: declaration.body,
     } as FunctionValue;
 
-    return env.declareVar(declaration.name, fn, true);
+    if (declaration.name) return env.declareVar(declaration.name, fn, true);
+    return fn;
 }
 
 export function evaluate_if_statement(node: IfStatement, env: Environment): RuntimeValue {
@@ -56,15 +59,17 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
     if (node.declared) assignment = node.assignment as VariableDeclaration;
     else assignment = node.assignment as AssignmentExpression;
 
-    evaluate(assignment, env);
+    const scope = new Environment(env);
 
-    let condition = evaluate(node.condition, env);
+    evaluate(assignment, scope);
+
+    let condition = evaluate(node.condition, scope);
     let result: RuntimeValue = MK_NULL();
     while (condition.value) {
-        for (const statement of node.body) result = evaluate(statement, env);
+        for (const statement of node.body) result = evaluate(statement, scope);
 
-        evaluate(node.compoundAssignment, env);
-        condition = evaluate(node.condition, env);
+        evaluate(node.compoundAssignment, scope);
+        condition = evaluate(node.condition, scope);
     }
 
     return result;
@@ -83,6 +88,23 @@ export function evaluate_while_statement(node: WhileStatement, env: Environment)
 
         condition = evaluate(node.condition, env);
     }
+
+    return result;
+}
+
+export function evaluate_foreach_statement(node: ForEachStatement, env: Environment): RuntimeValue {
+    const scope = new Environment(env);
+
+    const list = env.lookupVar(node.list.symbol) as ListValue;
+
+    if (node.declared) scope.declareVar(node.element.symbol, MK_NULL(), false);
+
+    let result: RuntimeValue = MK_NULL();
+    list.value.forEach((element) => {
+        scope.assignVar(node.element.symbol, element);
+
+        for (const statement of node.body) result = evaluate(statement, scope);
+    });
 
     return result;
 }

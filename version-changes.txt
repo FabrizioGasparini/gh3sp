@@ -1,0 +1,44 @@
+v-1.1.1-alpha
+  # Fixes
+    -> Updated 'If', 'For' and 'While' from 'Expressions' to 'Statements'
+    -> Fixed 'For Loop' variabile declaration: declaring a 'Counter' variabile ( e.g. for(let i = 0; ...) ) inside the parenthesis now doesn't throw an error
+    -> Fixed 'Args List' Parsing: parsing compound assignment operations is now available
+  # Features
+    -> Single Line 'If', 'For' and 'While' Statements are now implemented
+
+v-1.2.0-alpha
+  # Features
+    -> Lists
+      -> Added List Declaration: list = [value, ...]
+      -> Added List Print: print(list), print(list[idx])
+      -> Added List Return Value: list[idx]
+      -> Added List Value Assignment: list[idx] = value
+      -> Added List Concatenation: list_c = list_a + list_b
+      -> Added List Functions
+        -> push(list, value)
+        -> pop(list)
+        -> shift(list)
+        -> unshift(list, value)
+        -> slice(list, start, end?)
+        -> contains(list, value)
+        -> reverse(list, value)
+        -> filter(list, function)
+        -> map(list, function)
+        -> sort(list, inverted?)
+
+    -> Negative Numbers: -10, -1.5
+    
+    -> Added 'length' Built-In Function: length(10), length("string"), length([1, true, "three"]), (string, number, object, list)
+
+    -> Function can now be 'Anonymous': fn(x) {body}
+    -> Variable Assignment, Variable Declaration and Function Call can now support 'Statements': let a = fn(args) { body }; function(fn(args) {body});
+  
+    -> 'foreach' statement
+    -> Identifier Computed Object Access: obj[ident] // ident of type "string"
+    
+
+v-x.x.x-alpha
+  # Features
+  
+  # TO-DO:
+    -> Constructors
