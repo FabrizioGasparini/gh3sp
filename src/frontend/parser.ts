@@ -1,3 +1,4 @@
+import { handleError, ParserError } from "../utils/errors_hander.ts";
 import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
@@ -5,6 +6,8 @@ import { tokenize, Token, TokenType } from "./lexer.ts";
 export default class Parser {
     private tokens: Token[] = [];
     private isDeclaring: boolean = false;
+    private currentLine: number = 1;
+    private currentColumn: number = 1;
 
     private not_eof(): boolean {
         return this.tokens[0].type != TokenType.EOF;
@@ -16,15 +19,16 @@ export default class Parser {
 
     private eat() {
         const prev = this.tokens.shift() as Token;
+        this.currentColumn += prev.value.length;
         return prev;
     }
 
     private expect(type: TokenType, err: string) {
         const prev = this.tokens.shift() as Token;
 
-        if (!prev || prev.type != type) {
-            throw `Parser Error:\n ${err}. ${JSON.stringify(prev)}. Expecting: ${type}`;
-        }
+        if (!prev || prev.type != type) this.returnError(new ParserError(err, type));
+
+        this.currentColumn += prev.value.length;
 
         return prev;
     }
@@ -43,6 +47,10 @@ export default class Parser {
         }
 
         return program;
+    }
+
+    private returnError(error: Error) {
+        handleError(error, this.currentLine, this.currentColumn);
     }
 
     private parse_statement(): Statement {
@@ -66,6 +74,14 @@ export default class Parser {
             case TokenType.ForEach:
                 return this.parse_foreach_statement();
 
+            case TokenType.NewLine:
+                this.eat();
+
+                this.currentLine++;
+                this.currentColumn = 1;
+
+                return this.parse_statement();
+
             default:
                 return this.parse_expression();
         }
@@ -75,13 +91,13 @@ export default class Parser {
         this.eat(); // eat fn keyword
         let name = undefined;
         if (this.at().type == TokenType.Identifier)
-            if (this.isDeclaring) throw "Cannot declare a named function during variable declaration";
+            if (this.isDeclaring) this.returnError(new SyntaxError("Cannot declare a named function during variable declaration"));
             else name = this.eat().value;
 
         const args = this.parse_args();
         const parameters: string[] = [];
         for (const arg of args) {
-            if (arg.kind != "Identifier") throw "Inside function declaration expected parameters to be of type string." + arg;
+            if (arg.kind != "Identifier") this.returnError(new SyntaxError("Expected string parameters inside of function declaration. " + arg));
 
             parameters.push((arg as Identifier).symbol);
         }
@@ -571,7 +587,7 @@ export default class Parser {
             }
 
             default:
-                throw `Unexpected token found during parsing! ${JSON.stringify(this.at())}`;
+                throw this.returnError(new SyntaxError(`Unexpected token found during parsing: ${JSON.stringify(this.at().value)} (${TokenType[this.at().type]})`));
         }
     }
 }

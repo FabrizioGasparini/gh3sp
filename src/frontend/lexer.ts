@@ -45,6 +45,7 @@ export enum TokenType {
     OpenBrace, // {
     CloseBrace, // }
 
+    NewLine,
     EOF, // End of file
 }
 
@@ -122,7 +123,7 @@ function isAlpha(src: string) {
 }
 
 function isSkippable(src: string) {
-    return src == " " || src == "\n" || src == "\t" || src == "\r";
+    return src == " " || src == "\t" || src == "\r";
 }
 
 function isSignleComment(src: string[]) {
@@ -214,7 +215,8 @@ export function tokenize(sourceCode: string): Token[] {
     while (src.length > 0) {
         const current = src[0];
 
-        if (isSignleComment(src)) skipSingleLineComment(src);
+        if (current == "\n") tokens.push(token(src.shift(), TokenType.NewLine));
+        else if (isSignleComment(src)) skipSingleLineComment(src);
         else if (isMultiComment(src)) skipMultiLineComment(src);
         else if (isMultiCharToken(src, 3, tripleCharTokens)) tokens.push(parseMultiCharToken(src, 3, tripleCharTokens));
         else if (isMultiCharToken(src, 2, doubleCharTokens)) tokens.push(parseMultiCharToken(src, 2, doubleCharTokens));

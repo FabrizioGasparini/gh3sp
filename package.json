@@ -7,8 +7,7 @@
     "gh3sp": "./dist/gh3sp.js"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node ./dist/gh3sp.js"
+    "build": "node prebuild.js && tsc && pkg . && node postbuild.js"
   },
   "keywords": [],
   "author": "gaspa",
