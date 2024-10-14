@@ -36,6 +36,13 @@ v-1.2.0-alpha
     -> 'foreach' statement
     -> Identifier Computed Object Access: obj[ident] // ident of type "string"
     
+v-1.2.1-alpha
+  # Changes
+    -> For statement compound assignment can now be a numeric expression or a numeric variabile which will increase the cycle variabile by its value: for(let i =0 ; i < 5; 1) // 1 is the same as i += 1, for(let i = 0; i < 5; a) // a is the same as i += a
+    -> Assignment expression now support 'assignee' (Expression) instead of 'name' (string) 
+  # Features
+    -> Better error implementation: ParserError, InterpreterError, line and column indication.
+    -> Added compound increment operator: i++, i--
 
 v-x.x.x-alpha
   # Features

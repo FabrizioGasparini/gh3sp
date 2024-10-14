@@ -1,3 +1,5 @@
+import { handleError, LexerError } from "../utils/errors_hander.ts";
+
 export enum TokenType {
     // Literal Types
     Identifier,
@@ -21,6 +23,7 @@ export enum TokenType {
 
     // Grouping & Operators
     BinaryOperator,
+    CompoundOperator,
     Equal,
     SpreadOperator,
 
@@ -50,7 +53,6 @@ export enum TokenType {
 }
 
 // Tokens Records
-
 const KEYWORDS: Record<string, TokenType> = {
     let: TokenType.Let,
     const: TokenType.Const,
@@ -94,12 +96,14 @@ const doubleCharTokens: Record<string, TokenType> = {
     "!=": TokenType.NotEqual,
     "<=": TokenType.LessThanOrEqual,
     ">=": TokenType.GreaterThenOrEqual,
-    "+=": TokenType.BinaryOperator,
-    "-=": TokenType.BinaryOperator,
-    "*=": TokenType.BinaryOperator,
-    "/=": TokenType.BinaryOperator,
-    "%=": TokenType.BinaryOperator,
-    "^=": TokenType.BinaryOperator,
+    "++": TokenType.CompoundOperator,
+    "--": TokenType.CompoundOperator,
+    "+=": TokenType.CompoundOperator,
+    "-=": TokenType.CompoundOperator,
+    "*=": TokenType.CompoundOperator,
+    "/=": TokenType.CompoundOperator,
+    "%=": TokenType.CompoundOperator,
+    "^=": TokenType.CompoundOperator,
 };
 
 const tripleCharTokens: Record<string, TokenType> = {
@@ -117,7 +121,6 @@ function token(value = "", type: TokenType): Token {
 }
 
 // Check Functions
-
 function isAlpha(src: string) {
     return src.toUpperCase() != src.toLocaleLowerCase();
 }
@@ -157,7 +160,6 @@ function isMultiCharToken(src: string[], length: number, record: Record<string, 
 }
 
 // Parsing Functions
-
 function parseString(src: string[]): string {
     const quoteType = src.shift(); // Removes quote (" or ')
     let str = "";
@@ -171,7 +173,7 @@ function parseString(src: string[]): string {
 function parseNumber(src: string[]): string {
     let num = "";
     while (src.length > 0 && (isNum(src[0]) || isDecimal(src) || isNegative(src))) {
-        if (isDecimal(src) && num.includes(".")) throw "Invalid number format.";
+        if (isDecimal(src) && num.includes(".")) throw handleError(new LexerError("Invalid number format"), currentLine, currentColumn);
         num += src.shift();
     }
     return num;
@@ -208,6 +210,9 @@ function parseMultiCharToken(src: string[], length: number, record: Record<strin
     return token(value, type);
 }
 
+let currentLine = 1;
+let currentColumn = 1;
+
 export function tokenize(sourceCode: string): Token[] {
     const tokens = new Array<Token>();
     const src = sourceCode.split("");
@@ -215,8 +220,15 @@ export function tokenize(sourceCode: string): Token[] {
     while (src.length > 0) {
         const current = src[0];
 
-        if (current == "\n") tokens.push(token(src.shift(), TokenType.NewLine));
-        else if (isSignleComment(src)) skipSingleLineComment(src);
+        if (current == "\n") {
+            tokens.push(token(src.shift(), TokenType.NewLine));
+            currentLine += 1;
+            currentColumn = 1;
+            continue;
+        } else if (isSkippable(current)) src.shift();
+        currentColumn += current.length;
+
+        if (isSignleComment(src)) skipSingleLineComment(src);
         else if (isMultiComment(src)) skipMultiLineComment(src);
         else if (isMultiCharToken(src, 3, tripleCharTokens)) tokens.push(parseMultiCharToken(src, 3, tripleCharTokens));
         else if (isMultiCharToken(src, 2, doubleCharTokens)) tokens.push(parseMultiCharToken(src, 2, doubleCharTokens));
@@ -225,9 +237,8 @@ export function tokenize(sourceCode: string): Token[] {
         else if (current == '"' || current == "'") tokens.push(token(parseString(src), TokenType.String));
         else if (current in singleCharTokens) tokens.push(token(src.shift(), singleCharTokens[current]));
         else if (isAlpha(current)) tokens.push(parseIdentifierOrKeyword(src));
-        else if (isSkippable(current)) src.shift();
         // Skip character
-        else throw "Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0);
+        else throw handleError(new LexerError("Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0)), currentLine, currentColumn);
     }
 
     tokens.push(token("EndOfFile", TokenType.EOF));

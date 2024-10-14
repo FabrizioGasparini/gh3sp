@@ -3,34 +3,39 @@ import { evaluate } from "./interpreter.ts";
 import { MK_BOOL } from "./values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue } from "./values.ts";
 import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
+import { handleError } from "../utils/errors_hander.ts";
 
 export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort];
+
+function throwError(error: string, line: number, column: number) {
+    throw handleError(new SyntaxError(error), line, column);
+}
 
 function time() {
     return MK_NUMBER(Date.now());
 }
 
-function str(args: RuntimeValue[]) {
+function str(args: RuntimeValue[], line: number, column: number) {
     try {
         return MK_STRING(args[0].value.toString());
     } catch {
-        throw `Invalid argument passed inside 'str' function`;
+        throw throwError(`Invalid argument passed inside 'str' function`, line, column);
     }
 }
 
-function int(args: RuntimeValue[]) {
+function int(args: RuntimeValue[], line: number, column: number) {
     try {
         return MK_NUMBER(parseInt(args[0].value));
     } catch {
-        throw `Invalid argument passed inside 'int' function`;
+        throw throwError(`Invalid argument passed inside 'int' function`, line, column);
     }
 }
 
-function type(args: RuntimeValue[]) {
+function type(args: RuntimeValue[], line: number, column: number) {
     try {
         return MK_STRING(args[0].type);
     } catch {
-        throw `Invalid argument passed inside 'type' function`;
+        throw throwError(`Invalid argument passed inside 'type' function`, line, column);
     }
 }
 
@@ -98,15 +103,15 @@ function parse_list(list: ListValue) {
     return values;
 }
 
-function length(args: RuntimeValue[]) {
+function length(args: RuntimeValue[], line: number, column: number) {
     try {
-        return MK_NUMBER(parse_length(args[0]));
+        return MK_NUMBER(parse_length(args[0], line, column));
     } catch {
-        throw `Invalid argument passed inside 'length' function`;
+        throw throwError(`Invalid argument passed inside 'length' function`, line, column);
     }
 }
 
-function parse_length(node: RuntimeValue) {
+function parse_length(node: RuntimeValue, line: number, column: number) {
     switch (node.type) {
         case "number":
         case "string":
@@ -119,14 +124,14 @@ function parse_length(node: RuntimeValue) {
             return (node as ObjectValue).properties.size;
 
         default:
-            throw "Object of type '" + node.type + "' has no length";
+            throw throwError("Object of type '" + node.type + "' has no length", line, column);
     }
 }
 
 // Lists Functions
 
-function push(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
+function push(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
 
     const list = args[0] as ListValue;
     const elem = args[1];
@@ -136,8 +141,8 @@ function push(args: RuntimeValue[], env: Environment) {
     return env.assignVar(list.name!, list);
 }
 
-function pop(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: argument must be a list.";
+function pop(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
 
     const list = args[0] as ListValue;
     const value = list.value.pop();
@@ -149,8 +154,8 @@ function pop(args: RuntimeValue[], env: Environment) {
     return value;
 }
 
-function shift(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: argument must be a list.";
+function shift(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
 
     const list = args[0] as ListValue;
     const value = list.value.shift();
@@ -162,28 +167,28 @@ function shift(args: RuntimeValue[], env: Environment) {
     return value;
 }
 
-function unshift(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
+function unshift(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
 
     const list = args[0] as ListValue;
 
-    if (args.length < 2) throw "Invalid arguments: two arguments are required";
+    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
     list.value.unshift(args[1]);
 
     return env.assignVar(list.name!, list);
 }
 
-function slice(args: RuntimeValue[]) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
+function slice(args: RuntimeValue[], line: number, column: number) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
 
     let start = 0;
     if (args.length > 1)
-        if (args[1].type != "number") throw "Invalid arguments: second argument must be a number.";
+        if (args[1].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
         else start = args[1].value;
 
     let end = args[0].value.length;
     if (args.length > 2)
-        if (args[2].type != "number") throw "Invalid arguments: second argument must be a number.";
+        if (args[2].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
         else end = args[2].value;
 
     const list = args[0] as ListValue;
@@ -195,12 +200,12 @@ function slice(args: RuntimeValue[]) {
     } as ListValue;
 }
 
-function contains(args: RuntimeValue[]) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
+function contains(args: RuntimeValue[], line: number, column: number) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
 
     const list = args[0] as ListValue;
 
-    if (args.length < 2) throw "Invalid arguments: two arguments are required";
+    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
     for (const value of list.value) {
         if (value.type == args[1].type && value.value == args[1].value) return MK_BOOL(true);
     }
@@ -208,8 +213,8 @@ function contains(args: RuntimeValue[]) {
     return MK_BOOL(false);
 }
 
-function reverse(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: argument must be a list.";
+function reverse(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
 
     const list = args[0] as ListValue;
     list.value.reverse();
@@ -217,15 +222,15 @@ function reverse(args: RuntimeValue[], env: Environment) {
     return env.assignVar(list.name!, list);
 }
 
-function filter(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
-    if (args[1].type != "function") throw "Invalid arguments: second argument must be a function.";
+function filter(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
+    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
 
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
-    if (fn.parameters.length > 1) throw "Invalid function argument: function must have only one parameter.";
-    if (fn.body.length > 1) throw "Invalid function argument: function must have only one expression in its body";
+    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
+    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
 
     const scope = new Environment(env);
 
@@ -247,15 +252,15 @@ function filter(args: RuntimeValue[], env: Environment) {
     } as ListValue;
 }
 
-function map(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
-    if (args[1].type != "function") throw "Invalid arguments: second argument must be a function.";
+function map(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
+    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
 
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
-    if (fn.parameters.length > 1) throw "Invalid function argument: function must have only one parameter.";
-    if (fn.body.length > 1) throw "Invalid function argument: function must have only one expression in its body";
+    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
+    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
 
     const scope = new Environment(env);
 
@@ -277,12 +282,12 @@ function map(args: RuntimeValue[], env: Environment) {
     } as ListValue;
 }
 
-function sort(args: RuntimeValue[], env: Environment) {
-    if (args[0].type != "list") throw "Invalid arguments: first argument must be a list.";
+function sort(args: RuntimeValue[], line: number, column: number, env: Environment) {
+    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
 
     let inverted: boolean = false;
     if (args.length > 1) {
-        if (args[1].type != "boolean") throw "Invalid arguments: second argument must be a boolean.";
+        if (args[1].type != "boolean") throw throwError("Invalid arguments: second argument must be a boolean", line, column);
         inverted = args[1].value;
     }
     const list = args[0] as ListValue;

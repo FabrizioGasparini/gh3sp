@@ -26,7 +26,9 @@ export default class Parser {
     private expect(type: TokenType, err: string) {
         const prev = this.tokens.shift() as Token;
 
-        if (!prev || prev.type != type) this.returnError(new ParserError(err, type));
+        if (prev.type == TokenType.NewLine) this.skipNewLine();
+
+        if (!prev || prev.type != type) this.throwError(new ParserError(err, type));
 
         this.currentColumn += prev.value.length;
 
@@ -43,17 +45,30 @@ export default class Parser {
 
         // Parse until END OF FILE
         while (this.not_eof()) {
+            if (this.at().type == TokenType.NewLine) {
+                this.skipNewLine();
+                if (!this.not_eof()) break;
+            }
+
             program.body.push(this.parse_statement());
         }
 
         return program;
     }
 
-    private returnError(error: Error) {
+    private throwError(error: Error) {
         handleError(error, this.currentLine, this.currentColumn);
     }
 
+    private skipNewLine() {
+        this.eat();
+        this.currentLine++;
+        this.currentColumn = 1;
+    }
+
     private parse_statement(): Statement {
+        if (this.at().type == TokenType.NewLine) this.skipNewLine();
+
         switch (this.at().type) {
             case TokenType.Let:
                 return this.parse_variable_declaration();
@@ -74,14 +89,6 @@ export default class Parser {
             case TokenType.ForEach:
                 return this.parse_foreach_statement();
 
-            case TokenType.NewLine:
-                this.eat();
-
-                this.currentLine++;
-                this.currentColumn = 1;
-
-                return this.parse_statement();
-
             default:
                 return this.parse_expression();
         }
@@ -91,13 +98,13 @@ export default class Parser {
         this.eat(); // eat fn keyword
         let name = undefined;
         if (this.at().type == TokenType.Identifier)
-            if (this.isDeclaring) this.returnError(new SyntaxError("Cannot declare a named function during variable declaration"));
+            if (this.isDeclaring) this.throwError(new SyntaxError("Cannot declare a named function during variable declaration"));
             else name = this.eat().value;
 
         const args = this.parse_args();
         const parameters: string[] = [];
         for (const arg of args) {
-            if (arg.kind != "Identifier") this.returnError(new SyntaxError("Expected string parameters inside of function declaration. " + arg));
+            if (arg.kind != "Identifier") this.throwError(new SyntaxError("Expected string parameters inside of function declaration. " + arg));
 
             parameters.push((arg as Identifier).symbol);
         }
@@ -118,6 +125,8 @@ export default class Parser {
             name,
             parameters,
             body,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as FunctionDeclaration;
 
         return fn;
@@ -127,26 +136,32 @@ export default class Parser {
         const isConstant = this.eat().type == TokenType.Const;
         const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
 
+        const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
+
         if (this.at().type == TokenType.Semicolon || this.at().type == TokenType.EOF) {
             this.eat();
-            if (isConstant) throw `Must assign value to constant expression '${identifier}'. No value provided.`;
+            if (isConstant) this.throwError(new SyntaxError(`Must assign value to constant expression '${assignee}'. No value provided.`));
 
             return {
                 kind: "VariableDeclaration",
-                identifier,
+                assignee,
                 constant: false,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as VariableDeclaration;
         }
 
-        this.expect(TokenType.Equal, "Expected equals token following identifier in variable declaration.");
+        this.expect(TokenType.Equal, "Expected equals token following identifier in variable declaration");
 
         this.isDeclaring = true;
 
         const declaration = {
             kind: "VariableDeclaration",
-            identifier,
+            assignee,
             constant: isConstant,
             value: this.parse_statement(),
+            line: this.currentLine,
+            column: this.currentColumn,
         } as VariableDeclaration;
 
         this.isDeclaring = false;
@@ -204,6 +219,8 @@ export default class Parser {
             condition,
             then: thenBranch,
             else: elseBranch,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as IfStatement;
     }
 
@@ -219,7 +236,7 @@ export default class Parser {
             declared = true;
         } else if (this.at().type == TokenType.Const) {
             this.eat();
-            throw `Invalid variable usage: Cannot reassign a constant variable '${this.at().value}' inside a for loop.`;
+            throw this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a for loop.`));
         } else {
             assignment = this.parse_assignment_expression();
             declared = false;
@@ -230,15 +247,20 @@ export default class Parser {
 
         this.expect(TokenType.Semicolon, "Expected ';' following for condition");
 
-        const compoundAssignment = this.parse_compound_assignment_expression();
+        const increment = this.parse_expression();
 
         this.expect(TokenType.CloseParen, "Expected ')' following for compound assignment");
 
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
-            while (this.at().type != TokenType.CloseBrace) body.push(this.parse_statement());
+            while (this.at().type != TokenType.CloseBrace) {
+                while (this.at().type == TokenType.NewLine) this.skipNewLine();
 
+                if (this.at().type == TokenType.CloseBrace) break;
+
+                body.push(this.parse_statement());
+            }
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
         } else {
             body.push(this.parse_statement());
@@ -250,8 +272,10 @@ export default class Parser {
             assignment,
             declared,
             condition,
-            compoundAssignment,
+            increment,
             body,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as ForStatement;
     }
 
@@ -264,7 +288,7 @@ export default class Parser {
         if (this.at().type == TokenType.Let) {
             this.eat();
             declared = true;
-        } else if (this.at().type == TokenType.Const) throw `Invalid variable usage: Cannot reassign a constant variable '${this.at().value}' inside a for loop.`;
+        } else if (this.at().type == TokenType.Const) this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a foreach loop.`));
 
         const element = this.parse_statement();
 
@@ -291,6 +315,8 @@ export default class Parser {
             body,
             list,
             declared,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as ForEachStatement;
     }
 
@@ -317,6 +343,8 @@ export default class Parser {
             kind: "WhileStatement",
             condition,
             body,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as WhileStatement;
     }
 
@@ -336,12 +364,21 @@ export default class Parser {
     private parse_compound_assignment_expression(): Expression {
         const left = this.parse_assignment_expression();
 
-        if (this.at().type == TokenType.BinaryOperator && this.at().value.includes("=")) {
+        if (this.at().type == TokenType.CompoundOperator) {
             const operator = this.eat().value;
 
-            const value = this.parse_assignment_expression();
+            let value;
+            if (operator == "++" || operator == "--") value = { kind: "NumericLiteral", value: 1 } as NumericLiteral;
+            else value = this.parse_assignment_expression();
 
-            return { kind: "CompoundAssignmentExpression", assigne: left, value, operator } as CompoundAssignmentExpression;
+            return {
+                kind: "CompoundAssignmentExpression",
+                assignee: left,
+                value,
+                operator,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as CompoundAssignmentExpression;
         }
 
         return left;
@@ -355,7 +392,13 @@ export default class Parser {
 
             const value = this.parse_statement();
 
-            return { kind: "AssignmentExpression", assigne: left, value } as AssignmentExpression;
+            return {
+                kind: "AssignmentExpression",
+                assignee: left,
+                value,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as AssignmentExpression;
         }
 
         return left;
@@ -373,6 +416,8 @@ export default class Parser {
                 left,
                 right,
                 operator,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as BinaryExpression;
         }
 
@@ -386,7 +431,7 @@ export default class Parser {
         const properties = new Array<Property>();
 
         while (this.not_eof() && this.at().type != TokenType.CloseBrace) {
-            const key = this.expect(TokenType.Identifier, "Object key expected.").value;
+            const key = this.expect(TokenType.Identifier, "Object key expected").value;
             if (this.at().type == TokenType.Comma) {
                 this.eat(); // Go past comma
                 properties.push({ key, kind: "Property" });
@@ -396,17 +441,22 @@ export default class Parser {
                 continue;
             }
 
-            this.expect(TokenType.Colon, "Missing colon following key in Object.");
+            this.expect(TokenType.Colon, "Missing colon following key in Object");
             const value = this.parse_expression();
 
             properties.push({ key, kind: "Property", value: value });
             if (this.at().type != TokenType.CloseBrace) {
-                this.expect(TokenType.Comma, "Expected comma or closing brace following property.");
+                this.expect(TokenType.Comma, "Expected comma or closing brace following property");
             }
         }
 
-        this.expect(TokenType.CloseBrace, "Object missing closing brace.");
-        return { kind: "ObjectLiteral", properties: properties } as ObjectLiteral;
+        this.expect(TokenType.CloseBrace, "Object missing closing brace");
+        return {
+            kind: "ObjectLiteral",
+            properties: properties,
+            line: this.currentLine,
+            column: this.currentColumn,
+        } as ObjectLiteral;
     }
 
     private parse_list_expression(): Expression {
@@ -435,6 +485,8 @@ export default class Parser {
         return {
             kind: "ListLiteral",
             values: values,
+            line: this.currentLine,
+            column: this.currentColumn,
         } as ListLiteral;
     }
 
@@ -449,6 +501,8 @@ export default class Parser {
                 left,
                 right,
                 operator,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as BinaryExpression;
         }
 
@@ -466,6 +520,8 @@ export default class Parser {
                 left,
                 right,
                 operator,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as BinaryExpression;
         }
 
@@ -483,6 +539,8 @@ export default class Parser {
                 left,
                 right,
                 operator,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as BinaryExpression;
         }
 
@@ -502,6 +560,8 @@ export default class Parser {
             kind: "CallExpression",
             caller,
             args: this.parse_args(),
+            line: this.currentLine,
+            column: this.currentColumn,
         } as CallExpression;
 
         if (this.at().type == TokenType.OpenParen) call_expression = this.parse_call_expression(call_expression);
@@ -510,7 +570,7 @@ export default class Parser {
     }
 
     private parse_args(): Expression[] {
-        this.expect(TokenType.OpenParen, "Expected open parenthesis.");
+        this.expect(TokenType.OpenParen, "Expected open parenthesis");
         const args = this.at().type == TokenType.CloseParen ? [] : this.parse_args_list();
 
         this.expect(TokenType.CloseParen, "Missing closing parenthesis inside argument list");
@@ -538,7 +598,7 @@ export default class Parser {
                 computed = false;
                 property = this.parse_primary_expression();
 
-                if (property.kind != "Identifier") throw "Cannot use dot operator without an identifier on the right.";
+                if (property.kind != "Identifier") this.throwError(new SyntaxError("Cannot use dot operator without an identifier on the right"));
             } else {
                 computed = true;
                 property = this.parse_expression();
@@ -550,6 +610,8 @@ export default class Parser {
                 object,
                 property,
                 computed,
+                line: this.currentLine,
+                column: this.currentColumn,
             } as MemberExpression;
         }
 
@@ -564,30 +626,39 @@ export default class Parser {
                 return {
                     kind: "Identifier",
                     symbol: this.eat().value,
+                    line: this.currentLine,
+                    column: this.currentColumn,
                 } as Identifier;
 
             case TokenType.Number:
                 return {
                     kind: "NumericLiteral",
                     value: parseFloat(this.eat().value),
+                    line: this.currentLine,
+                    column: this.currentColumn,
                 } as NumericLiteral;
 
             case TokenType.String: {
                 return {
                     kind: "StringLiteral",
                     value: this.eat().value,
+                    line: this.currentLine,
+                    column: this.currentColumn,
                 } as StringLiteral;
             }
 
             case TokenType.OpenParen: {
                 this.eat(); // Go past parenthesis
                 const value = this.parse_statement();
-                this.expect(TokenType.CloseParen, "Unexpected token found inside parenthesized expression. Expected closing parenthesis."); // If the closing parenthesis is not found
+                this.expect(TokenType.CloseParen, "Unexpected token found inside parenthesized expression. Expected closing parenthesis"); // If the closing parenthesis is not found
                 return value;
             }
 
+            case TokenType.EOF:
+                throw this.throwError(new RangeError("Parser unexpectedly reached the end of file"));
+
             default:
-                throw this.returnError(new SyntaxError(`Unexpected token found during parsing: ${JSON.stringify(this.at().value)} (${TokenType[this.at().type]})`));
+                throw this.throwError(new SyntaxError(`Unexpected token found during parsing: ${JSON.stringify(this.at().value)} (${TokenType[this.at().type]})`));
         }
     }
 }

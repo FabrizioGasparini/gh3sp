@@ -52,7 +52,7 @@ export interface ListValue extends RuntimeValue {
     name?: string;
 }
 
-export type FunctionCall = (args: RuntimeValue[], env: Environment) => RuntimeValue;
+export type FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => RuntimeValue;
 
 export function MK_NATIVE_FUNCTION(call: FunctionCall) {
     return { type: "native-function", call, name: call.name } as NativeFunctionValue;

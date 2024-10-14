@@ -26,6 +26,8 @@ export type NodeType =
 
 export interface Statement {
     kind: NodeType;
+    line?: number;
+    column?: number;
 }
 
 export interface Program extends Statement {
@@ -36,7 +38,7 @@ export interface Program extends Statement {
 export interface VariableDeclaration extends Statement {
     kind: "VariableDeclaration";
     constant: boolean;
-    identifier: string;
+    assignee: Expression;
     value?: Expression;
 }
 
@@ -51,13 +53,13 @@ export interface Expression extends Statement {}
 
 export interface AssignmentExpression extends Expression {
     kind: "AssignmentExpression";
-    assigne: Expression;
+    assignee: Expression;
     value: Expression;
 }
 
 export interface CompoundAssignmentExpression extends Expression {
     kind: "CompoundAssignmentExpression";
-    assigne: Expression;
+    assignee: Expression;
     value: Expression;
     operator: string;
 }
@@ -99,7 +101,7 @@ export interface ForStatement extends Statement {
     assignment: AssignmentExpression | VariableDeclaration;
     declared: boolean;
     condition: Expression;
-    compoundAssignment: CompoundAssignmentExpression;
+    increment: Expression;
     body: Statement[];
 }
 

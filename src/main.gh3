@@ -1,2 +1,0 @@
-let x = 10
-if(5 < x < 12) print("Ciao");

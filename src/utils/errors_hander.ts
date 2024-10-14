@@ -30,6 +30,20 @@ export function handleError(error: Error, line: number, column: number) {
 export class ParserError extends Error {
     constructor(error: string, type: TokenType) {
         super(`${error}. Expecting: ${TokenType[type]}`);
-        this.name = "ParsingError";
+        this.name = "ParserError";
+    }
+}
+
+export class InterpreterError extends Error {
+    constructor(error: string) {
+        super(error);
+        this.name = "InterpreterError";
+    }
+}
+
+export class LexerError extends Error {
+    constructor(error: string) {
+        super(error);
+        this.name = "LexerError";
     }
 }
