@@ -48,6 +48,13 @@ v-1.2.2-alpha
   # Fixes
     -> Lexer MAJOR error fixed: the lexer wasn't skipping "skippable" characters, such as " " (Space), "\t" (Tab), ecc, properly 
 
+v-1.2.3-alpha
+  # Fixes
+    -> Fixed foreach and while statements: now foreach and while statements skip new line tokens properly.
+    -> Fixed for statement: now for statement variable declaration works properly.
+  # Features
+    -> Added input built-in function: input(text) // input supports numbers, booleans ans strings 
+
 v-x.x.x-alpha
   # Features
   

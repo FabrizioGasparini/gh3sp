@@ -301,7 +301,13 @@ export default class Parser {
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
-            while (this.at().type != TokenType.CloseBrace) body.push(this.parse_statement());
+            while (this.at().type != TokenType.CloseBrace) {
+                while (this.at().type == TokenType.NewLine) this.skipNewLine();
+
+                if (this.at().type == TokenType.CloseBrace) break;
+
+                body.push(this.parse_statement());
+            }
 
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
         } else {
@@ -331,7 +337,13 @@ export default class Parser {
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
-            while (this.at().type != TokenType.CloseBrace) body.push(this.parse_statement());
+            while (this.at().type != TokenType.CloseBrace) {
+                while (this.at().type == TokenType.NewLine) this.skipNewLine();
+
+                if (this.at().type == TokenType.CloseBrace) break;
+
+                body.push(this.parse_statement());
+            }
 
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
         } else {

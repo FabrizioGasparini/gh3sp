@@ -243,7 +243,6 @@ export function tokenize(sourceCode: string): Token[] {
         else throw handleError(new LexerError("Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0)), currentLine, currentColumn);
     }
 
-    console.log(tokens);
     tokens.push(token("EndOfFile", TokenType.EOF));
     return tokens;
 }

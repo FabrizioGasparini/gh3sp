@@ -58,26 +58,27 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
     if (node.declared) assignment = node.assignment as VariableDeclaration;
     else assignment = node.assignment as AssignmentExpression;
 
-    const scope = new Environment(env);
+    const newScope = new Environment(env);
 
+    const scope = assignment.kind == "VariableDeclaration" ? newScope : env;
     const variable = (assignment.assignee as Identifier).symbol;
-    evaluate(assignment, scope);
+    evaluate(assignment, newScope);
 
     let iterations = 0;
 
-    let condition = evaluate(node.condition, scope);
+    let condition = evaluate(node.condition, newScope);
     let result: RuntimeValue = MK_NULL();
 
     if (node.body.length == 0) return result;
     while (condition.value) {
-        if (iterations++ >= env.MAX_ITERATIONS) throw throwError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)");
+        if (iterations++ >= scope.MAX_ITERATIONS) throw throwError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)");
 
-        for (const statement of node.body) result = evaluate(statement, scope);
+        for (const statement of node.body) result = evaluate(statement, newScope);
 
-        if (node.increment.kind == "CompoundAssignmentExpression") evaluate(node.increment as CompoundAssignmentExpression, scope);
-        else if (node.increment.kind == "NumericLiteral") env.assignVar(variable, MK_NUMBER(env.lookupVar(variable).value + evaluate(node.increment as NumericLiteral, scope).value));
-        else if (node.increment.kind == "Identifier") env.assignVar(variable, MK_NUMBER(env.lookupVar(variable).value + env.lookupVar((node.increment as Identifier).symbol).value));
-        condition = evaluate(node.condition, scope);
+        if (node.increment.kind == "CompoundAssignmentExpression") evaluate(node.increment as CompoundAssignmentExpression, newScope);
+        else if (node.increment.kind == "NumericLiteral") scope.assignVar(variable, MK_NUMBER(scope.lookupVar(variable).value + evaluate(node.increment as NumericLiteral, newScope).value));
+        else if (node.increment.kind == "Identifier") scope.assignVar(variable, MK_NUMBER(scope.lookupVar(variable).value + scope.lookupVar((node.increment as Identifier).symbol).value));
+        condition = evaluate(node.condition, newScope);
     }
 
     return result;

@@ -4,8 +4,9 @@ import { MK_BOOL } from "./values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue } from "./values.ts";
 import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
 import { handleError } from "../utils/errors_hander.ts";
+import * as readlineSync from "readline-sync";
 
-export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort];
+export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort, input];
 
 function throwError(error: string, line: number, column: number) {
     throw handleError(new SyntaxError(error), line, column);
@@ -48,6 +49,40 @@ function print(args: RuntimeValue[]) {
 
     console.log(...params);
     return MK_NULL();
+}
+
+function input(args: RuntimeValue[], line: number, column: number): RuntimeValue {
+    let string = "";
+    if (args.length > 0)
+        if (args[0].type != "string") throw throwError("Invalid argument passed inside 'input' function", line, column);
+        else string = args[0].value;
+
+    const input = readlineSync.question(string);
+
+    let result: RuntimeValue = MK_STRING("");
+    if (input) {
+        if (isNum(input)) result = MK_NUMBER(parseNumber(input));
+        else if (isBool(input)) result = MK_BOOL(input == "true");
+        else result = MK_STRING(input);
+    }
+
+    return result;
+}
+
+function isBool(src: string) {
+    return src == "true" || src == "false";
+}
+
+function isNum(value: string) {
+    const number = parseFloat(value);
+    return !isNaN(number) && !isNaN(Number(value));
+}
+
+function parseNumber(value: string) {
+    const number = parseFloat(value);
+
+    if (Number.isInteger(number)) return parseInt(value);
+    else return parseFloat(value);
 }
 
 function parse(node: RuntimeValue) {

@@ -16,12 +16,13 @@
     "@types/node": "^16.18.112",
     "typescript": "^4.9.5"
   },
-  "dependencies": {
-    "pkg": "^21.6.1"
-  },
   "pkg": {
     "targets": [
       "node18-win-x64"
     ]
+  },
+  "dependencies": {
+    "pkg": "^5.8.1",
+    "readline-sync": "^1.4.10"
   }
 }
