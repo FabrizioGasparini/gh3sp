@@ -43,6 +43,10 @@ v-1.2.1-alpha
   # Features
     -> Better error implementation: ParserError, InterpreterError, line and column indication.
     -> Added compound increment operator: i++, i--
+    
+v-1.2.2-alpha
+  # Fixes
+    -> Lexer MAJOR error fixed: the lexer wasn't skipping "skippable" characters, such as " " (Space), "\t" (Tab), ecc, properly 
 
 v-x.x.x-alpha
   # Features

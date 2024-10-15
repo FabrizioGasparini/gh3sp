@@ -164,7 +164,7 @@ function parseString(src: string[]): string {
     const quoteType = src.shift(); // Removes quote (" or ')
     let str = "";
 
-    while (src.length > 0 && src[0] !== quoteType) str += src.shift();
+    while (src.length > 0 && src[0] != quoteType) str += src.shift();
 
     src.shift(); // Removes closing quote
     return str;
@@ -225,7 +225,10 @@ export function tokenize(sourceCode: string): Token[] {
             currentLine += 1;
             currentColumn = 1;
             continue;
-        } else if (isSkippable(current)) src.shift();
+        } else if (isSkippable(current)) {
+            src.shift();
+            continue;
+        }
         currentColumn += current.length;
 
         if (isSignleComment(src)) skipSingleLineComment(src);
@@ -237,10 +240,10 @@ export function tokenize(sourceCode: string): Token[] {
         else if (current == '"' || current == "'") tokens.push(token(parseString(src), TokenType.String));
         else if (current in singleCharTokens) tokens.push(token(src.shift(), singleCharTokens[current]));
         else if (isAlpha(current)) tokens.push(parseIdentifierOrKeyword(src));
-        // Skip character
         else throw handleError(new LexerError("Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0)), currentLine, currentColumn);
     }
 
+    console.log(tokens);
     tokens.push(token("EndOfFile", TokenType.EOF));
     return tokens;
 }
