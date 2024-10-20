@@ -12,6 +12,7 @@ export type NodeType =
     | "AssignmentExpression"
     | "CompoundAssignmentExpression"
     | "BinaryExpression"
+    | "LogicalExpression"
     | "MemberExpression"
     | "CallExpression"
 
@@ -74,6 +75,13 @@ export interface CallExpression extends Expression {
     kind: "CallExpression";
     args: Expression[];
     caller: Expression;
+}
+
+export interface LogicalExpression extends Expression {
+    kind: "LogicalExpression";
+    left: Expression;
+    right: Expression;
+    operator: string;
 }
 
 export interface MemberExpression extends Expression {

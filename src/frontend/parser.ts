@@ -1,5 +1,5 @@
 import { handleError, ParserError } from "../utils/errors_hander.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -178,7 +178,9 @@ export default class Parser {
 
         this.expect(TokenType.OpenParen, "Expected '(' following if keyword");
 
-        const condition = this.parse_expression();
+        const condition = this.parse_expression();        
+        if(!condition) throw this.throwError(new SyntaxError("Expected condition inside if statement"));
+        
         this.expect(TokenType.CloseParen, "Expected ')' following if condition");
 
         const thenBranch: Statement[] = [];
@@ -365,6 +367,8 @@ export default class Parser {
     // Compound Assignment Expression
     // Assignment Expression
     // Equality Expression
+    // Logical AND Expression
+    // Logical OR Expression
     // Object Expression
     // Additive Expression
     // Multiplicative Expression
@@ -395,15 +399,15 @@ export default class Parser {
 
         return left;
     }
-
+    
     private parse_assignment_expression(): Expression {
-        const left = this.parse_equality_expression();
-
+        const left = this.parse_logical_or_expression();
+        
         if (this.at().type == TokenType.Equal) {
             this.eat();
-
+            
             const value = this.parse_statement();
-
+            
             return {
                 kind: "AssignmentExpression",
                 assignee: left,
@@ -412,9 +416,69 @@ export default class Parser {
                 column: this.currentColumn,
             } as AssignmentExpression;
         }
-
+        
         return left;
     }
+    
+    private parse_logical_or_expression(): Expression {
+        let left = this.parse_logical_and_expression();
+        
+        if (this.at().type == TokenType.LogicOperator && this.at().value == "||") {
+            const operator = this.eat().value;
+            const right = this.parse_logical_and_expression();
+            
+            left = {
+                kind: "LogicalExpression",
+                left,
+                right,
+                operator,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as LogicalExpression;
+        }
+        
+        return left
+    }
+    
+    
+    private parse_logical_and_expression(): Expression {
+        let left = this.parse_logical_not_expression();
+        
+        if (this.at().type == TokenType.LogicOperator && this.at().value == "&&") {
+            const operator = this.eat().value;
+            const right = this.parse_logical_not_expression();
+            
+            left = {
+                kind: "LogicalExpression",
+                left,
+                right,
+                operator,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as LogicalExpression;
+        }
+        
+        return left
+    }
+    
+    private parse_logical_not_expression(): Expression {
+        if (this.at().type == TokenType.LogicOperator && this.at().value == "!") {
+            const operator = this.eat().value;
+            const right = this.parse_equality_expression();
+
+            return {
+                kind: "LogicalExpression",
+                left: {"kind": "BooleanLiteral", "value": true},
+                right: right,
+                operator,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as LogicalExpression;
+        }
+
+        return this.parse_equality_expression()
+    }
+
 
     private parse_equality_expression(): Expression {
         let left = this.parse_object_expression();
@@ -435,6 +499,7 @@ export default class Parser {
 
         return left;
     }
+
 
     private parse_object_expression(): Expression {
         if (this.at().type != TokenType.OpenBrace) return this.parse_list_expression();

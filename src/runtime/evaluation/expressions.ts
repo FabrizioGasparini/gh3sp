@@ -1,4 +1,4 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral } from "../../frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression } from "../../frontend/ast.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
 import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values.ts";
@@ -110,7 +110,7 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
 
     const op = binop.operator;
 
-    if (left == undefined || right == undefined) throw throwError("Missing required parameter");
+    if (left == undefined || right == undefined) throw throwError("Missing required parameter inside binary expression");
 
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^") {
         if (left.type == "number" && right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
@@ -119,6 +119,26 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
         else if (left.type == "number" && right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, op);
         else if (left.type == "list" && right.type == "list") return evaluate_list_binary_expression(right as ListValue, left as ListValue, op);
     } else if (op == "==" || op == "!=" || op == "<=" || op == ">=" || op == "<" || op == ">") return evaluate_comparison_binary_expression(left, right, op);
+
+    return MK_NULL();
+}
+
+export function evaluate_logical_expression(node: LogicalExpression, env: Environment): RuntimeValue {
+    const left = evaluate(node.left, env);
+    const right = evaluate(node.right, env);
+
+    const op = node.operator;
+
+    console.log(node.operator)
+    if (left == undefined || right == undefined) throw throwError("Missing required parameter inside logical expression");
+    
+    
+    if (op == "&&") return MK_BOOL(left.value && right.value);
+    else if (op == "||") return MK_BOOL(left.value || right.value);
+    else if (op == "!") {
+        if (left.type != "boolean" || right.type != "boolean") throw throwError("Invalid parameter inside logical expression. Expected boolean value.");
+        return MK_BOOL(!right.value);
+    }
 
     return MK_NULL();
 }

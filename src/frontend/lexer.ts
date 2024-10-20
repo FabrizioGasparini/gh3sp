@@ -24,6 +24,7 @@ export enum TokenType {
     // Grouping & Operators
     BinaryOperator,
     CompoundOperator,
+    LogicOperator,
     Equal,
     SpreadOperator,
 
@@ -87,6 +88,7 @@ const singleCharTokens: Record<string, TokenType> = {
     "/": TokenType.BinaryOperator,
     "%": TokenType.BinaryOperator,
     "^": TokenType.BinaryOperator,
+    "!": TokenType.LogicOperator,
     "<": TokenType.LessThan,
     ">": TokenType.GreaterThan,
 };
@@ -104,6 +106,8 @@ const doubleCharTokens: Record<string, TokenType> = {
     "/=": TokenType.CompoundOperator,
     "%=": TokenType.CompoundOperator,
     "^=": TokenType.CompoundOperator,
+    "&&": TokenType.LogicOperator,
+    "||": TokenType.LogicOperator,
 };
 
 const tripleCharTokens: Record<string, TokenType> = {

@@ -1,7 +1,7 @@
-import { RuntimeValue, MK_NUMBER, MK_STRING } from "./values.ts";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement } from "../frontend/ast.ts";
+import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL } from "./values.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral } from "../frontend/ast.ts";
 import Environment from "./environments.ts";
-import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression } from "./evaluation/expressions.ts";
+import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression } from "./evaluation/expressions.ts";
 import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
 import { handleError, InterpreterError } from "../utils/errors_hander.ts";
 
@@ -21,11 +21,17 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         case "StringLiteral":
             return MK_STRING((astNode as StringLiteral).value);
 
+        case "BooleanLiteral":
+            return MK_BOOL((astNode as BooleanLiteral).value);
+
         case "Identifier":
             return evaluate_identifier(astNode as Identifier, env);
 
         case "BinaryExpression":
             return evaluate_binary_expression(astNode as BinaryExpression, env);
+
+        case "LogicalExpression":
+            return evaluate_logical_expression(astNode as LogicalExpression, env);
 
         case "Program":
             return evaluate_program(astNode as Program, env);
