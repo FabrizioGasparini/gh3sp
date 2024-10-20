@@ -47,6 +47,11 @@ for (let i = 0; i < 5; i += 1) {
 
 // Struttura a linea singola (richiede il ';')
 for (let i = 0; i < 5; i += 1) print(i);
+
+let list = [0, 2, 4, 6]
+foreach (let elem in list) {
+    print(elem)
+}
 ```
 
 ### 3. Funzioni
@@ -95,20 +100,7 @@ Esempio:
 let greeting = "Ciao, " + name
 ```
 
-### 7. Funzioni Built-In
-
-Gh3sp include diverse funzioni built-in utili per operazioni comuni, tra cui:
-- 'print(...)': Stampa il valore nella console.
-- 'int(value)': Converte un valore in numero intero.
-- 'str(value)': Converte un valore in stringa.
-- 'type(value)': Restituisce il tipo del valore passato.
-
-Esempio:
-```
-print("Il tipo di '10' è: " + type(10))
-```
-
-### 8. Liste
+### 7. Liste
 - **Dichiarazione di Liste**: Ora è possibile dichiarare una lista utilizzando la sintassi `list = [value, ...]`.
   - Esempio:
     ```gh3sp
@@ -189,24 +181,29 @@ print("Il tipo di '10' è: " + type(10))
     sort(myList)  // Output: [3, 4, 5, 10]
     sort(myList, true)  // Output: [10, 5, 4, 3]
     ```
+### 8. Funzioni Built-In
 
+Gh3sp include diverse funzioni built-in utili per operazioni comuni, tra cui:
+- 'print(...)': Stampa il valore nella console.
+- 'input(value)': Legge un valore dalla console.
+- 'int(value)': Converte un valore in numero intero.
+- 'str(value)': Converte un valore in stringa.
+- 'type(value)': Restituisce il tipo del valore passato.
+- 'length(value)': Restiutisce la lunghezza di una variabile
 
-### 9. Numeri Negativi
-Gh3sp supporta numeri negativi, ad esempio `-10`, `-1.5`.
+Esempio:
+```
+print("Il tipo di '10' è: " + type(10))
+length(10)
+```
 
-### 10. Funzione Built-In 'length'
-Gh3sp include la funzione `length` per ottenere la lunghezza di variabili:
-- `length(10)`
-- `length("string")`
-- `length([1, true, "three"])`
-
-### 11. Dichiarazione di Funzioni
+### 9. Dichiarazione di Funzioni
 Le funzioni possono ora essere dichiarate in questo modo:
 ```
 let function = fn(args) { body }
 ```
 
-### 12. Accesso agli Oggetti tramite Identificatori Calcolati
+### 10. Accesso agli Oggetti tramite Identificatori Calcolati
 Gh3sp supporta l'accesso agli oggetti tramite identificatori calcolati:
 ```
 let obj = {
