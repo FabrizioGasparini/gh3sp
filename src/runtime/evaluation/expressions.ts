@@ -129,7 +129,6 @@ export function evaluate_logical_expression(node: LogicalExpression, env: Enviro
 
     const op = node.operator;
 
-    console.log(node.operator)
     if (left == undefined || right == undefined) throw throwError("Missing required parameter inside logical expression");
     
     
