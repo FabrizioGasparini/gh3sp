@@ -31,6 +31,10 @@ function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValu
         case "^":
             result = left.value ^ right.value;
             break;
+
+        case "//":
+            result = parseInt((left.value / right.value).toString());
+            break;
     }
 
     return { value: result, type: "number" } as NumberValue;
@@ -112,7 +116,7 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
 
     if (left == undefined || right == undefined) throw throwError("Missing required parameter inside binary expression");
 
-    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^") {
+    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") {
         if (left.type == "number" && right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
         else if (left.type == "string" && right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, op);
         else if (left.type == "string" && right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, op);
@@ -172,29 +176,7 @@ export function evaluate_compound_assignment_expression(node: CompoundAssignment
     /*if (currentValue.type != value.type)
         throw "Invalid compound assignment between type '" + currentValue.type + "' and '" + value.type + "'"*/
 
-    let op = node.operator;
-    switch (node.operator) {
-        case "++":
-        case "+=":
-            op = "+";
-            break;
-        case "--":
-        case "-=":
-            op = "-";
-            break;
-        case "*=":
-            op = "*";
-            break;
-        case "/=":
-            op = "/";
-            break;
-        case "%=":
-            op = "%";
-            break;
-        case "^=":
-            op = "^";
-            break;
-    }
+    const op = node.operator.substring(0, node.operator.length - 1);
 
     let newValue: RuntimeValue = MK_NULL();
     if (currentValue.type == "number" && value.type == "number") newValue = evaluate_numeric_binary_expression(currentValue as NumberValue, value as NumberValue, op);

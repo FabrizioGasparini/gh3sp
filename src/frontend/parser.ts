@@ -1,4 +1,4 @@
-import { handleError, ParserError } from "../utils/errors_hander.ts";
+import { handleError, ParserError } from "../utils/errors_handler.ts";
 import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
@@ -589,7 +589,7 @@ export default class Parser {
     private parse_multiplicative_expression(): Expression {
         let left = this.parse_exponential_expression();
 
-        while (this.at().value == "*" || this.at().value == "/" || this.at().value == "%") {
+        while (this.at().value == "*" || this.at().value == "/" || this.at().value == "%" || this.at().value == "//") {
             const operator = this.eat().value;
             const right = this.parse_exponential_expression();
             left = {

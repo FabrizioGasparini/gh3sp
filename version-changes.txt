@@ -56,11 +56,17 @@ v1.2.3-alpha
   # Features
     -> Added input built-in function: input(text) // input supports numbers, booleans ans strings 
 
-== ^^ RELEASED ^^ ==
-
 v2.0.0
   # Features
     -> Added logical operations: a == b || 2 == 3 || 3 == 2
+
+== ^^ RELEASED ^^ ==
+
+v2.0.1
+  # Changes
+    -> Single line comment now uses '#' instead of '//'
+  # Features
+    -> Added integer division: 8 // 3 # 2
 
 vx.x.x-alpha
   # Features

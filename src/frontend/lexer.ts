@@ -1,4 +1,4 @@
-import { handleError, LexerError } from "../utils/errors_hander.ts";
+import { handleError, LexerError } from "../utils/errors_handler.ts";
 
 export enum TokenType {
     // Literal Types
@@ -98,6 +98,7 @@ const doubleCharTokens: Record<string, TokenType> = {
     "!=": TokenType.NotEqual,
     "<=": TokenType.LessThanOrEqual,
     ">=": TokenType.GreaterThenOrEqual,
+    "//": TokenType.BinaryOperator,
     "++": TokenType.CompoundOperator,
     "--": TokenType.CompoundOperator,
     "+=": TokenType.CompoundOperator,
@@ -112,6 +113,7 @@ const doubleCharTokens: Record<string, TokenType> = {
 
 const tripleCharTokens: Record<string, TokenType> = {
     "...": TokenType.SpreadOperator,
+    "//=": TokenType.CompoundOperator,
 };
 
 // Token Type
@@ -134,7 +136,7 @@ function isSkippable(src: string) {
 }
 
 function isSignleComment(src: string[]) {
-    return src[0] + src[1] == "//";
+    return src[0] == "#";
 }
 
 function isMultiComment(src: string[]) {

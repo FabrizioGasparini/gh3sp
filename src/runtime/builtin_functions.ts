@@ -3,7 +3,7 @@ import { evaluate } from "./interpreter.ts";
 import { MK_BOOL } from "./values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue } from "./values.ts";
 import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
-import { handleError } from "../utils/errors_hander.ts";
+import { handleError } from "../utils/errors_handler.ts";
 import * as readlineSync from "readline-sync";
 
 export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort, input];
