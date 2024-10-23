@@ -1,3 +1,4 @@
+import { InterpreterError } from "../utils/errors_handler.ts";
 import { buildInFunctions } from "./builtin_functions.ts";
 import { throwError } from "./interpreter.ts";
 import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
@@ -32,7 +33,7 @@ export default class Environment {
 
     public declareVar(varname: string, value: RuntimeValue, constant: boolean): RuntimeValue {
         if (this.variables.has(varname)) {
-            throw throwError(`Cannot declare variable '${varname}' as it already is defined.`);
+            throw throwError(new InterpreterError(`Cannot declare variable '${varname}' as it already is defined.`));
         }
 
         this.variables.set(varname, value);
@@ -45,7 +46,7 @@ export default class Environment {
     public assignVar(varname: string, value: RuntimeValue): RuntimeValue {
         const env = this.resolve(varname);
 
-        if (env.constants.has(varname)) throw throwError(`Cannot reassign to variable ${varname} as it was declared constant.`);
+        if (env.constants.has(varname)) throw throwError(new InterpreterError(`Cannot reassign to variable ${varname} as it was declared constant.`));
 
         env.variables.set(varname, value);
         return value;
@@ -60,7 +61,7 @@ export default class Environment {
     public resolve(varname: string): Environment {
         if (this.variables.has(varname)) return this;
 
-        if (this.parent == undefined) throw throwError(`Cannot resolve '${varname}' as it does not exists.`);
+        if (this.parent == undefined) throw throwError(new InterpreterError(`Cannot resolve '${varname}' as it does not exists.`));
 
         return this.parent.resolve(varname);
     }

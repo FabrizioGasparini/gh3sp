@@ -73,10 +73,10 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
             return evaluate_list_expression(astNode as ListLiteral, env);
 
         default:
-            throw throwError(`This AST Node has not yet been setup for interpretation. ${JSON.stringify(astNode)}`);
+            throw throwError(new InterpreterError(`This AST Node has not yet been setup for interpretation. ${JSON.stringify(astNode)}`));
     }
 }
 
-export function throwError(error: string) {
-    throw handleError(new InterpreterError(error), currentLine, currentColumn);
+export function throwError(error: Error) {
+    throw handleError(error, currentLine, currentColumn);
 }

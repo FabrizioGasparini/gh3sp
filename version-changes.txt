@@ -60,13 +60,21 @@ v2.0.0
   # Features
     -> Added logical operations: a == b || 2 == 3 || 3 == 2
 
-== ^^ RELEASED ^^ ==
 
 v2.0.1
   # Changes
     -> Single line comment now uses '#' instead of '//'
   # Features
     -> Added integer division: 8 // 3 # 2
+
+== ^^ RELEASED ^^ ==
+
+v2.x.x
+  # Features
+    -> Square root built-in function: sqrt(num)
+    -> Math Errors handling
+  # Fixes
+    -> Fixed exponential expression: now elevating a number to a power works properly
 
 vx.x.x-alpha
   # Features

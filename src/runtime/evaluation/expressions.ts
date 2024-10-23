@@ -1,4 +1,5 @@
 import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression } from "../../frontend/ast.ts";
+import { InterpreterError, MathError } from "../../utils/errors_handler.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
 import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values.ts";
@@ -21,6 +22,7 @@ function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValu
             break;
 
         case "/":
+            if (right.value === 0) throw throwError(new MathError("Division by zero is not allowed"));
             result = left.value / right.value;
             break;
 
@@ -29,7 +31,7 @@ function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValu
             break;
 
         case "^":
-            result = left.value ^ right.value;
+            result = left.value ** right.value;
             break;
 
         case "//":
@@ -44,7 +46,7 @@ function evaluate_string_binary_expression(left: StringValue, right: StringValue
     let result: string = "";
 
     if (operator == "+") result = left.value + right.value;
-    else throwError("Invalid operation between strings: '" + operator + "'");
+    else throwError(new InterpreterError("Invalid operation between strings: '" + operator + "'"));
 
     return { value: result, type: "string" } as StringValue;
 }
@@ -53,7 +55,7 @@ function evaluate_mixed_string_numeric_binary_expression(string: StringValue, nu
     let result: string = "";
 
     if (operator == "*") for (let i = 0; i < number.value; i++) result += string.value;
-    else throw throwError("Invalid operation between string and number: '" + operator + "'");
+    else throw throwError(new InterpreterError("Invalid operation between string and number: '" + operator + "'"));
 
     return { value: result, type: "string" } as StringValue;
 }
@@ -67,7 +69,7 @@ function evaluate_list_binary_expression(left: ListValue, right: ListValue, oper
             } as ListValue;
 
         default:
-            throw throwError("Invalid operation '" + operator + "' between lists");
+            throw throwError(new InterpreterError("Invalid operation '" + operator + "' between lists"));
     }
 }
 
@@ -102,10 +104,10 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
             break;
 
         default:
-            throw throwError("Invalid comparison operator: '" + operator + "'");
+            throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'"));
     }
 
-    throw throwError("Invalid comparison operator: '" + operator + "'" + " between type '" + left.type + "' and '" + right.type + "'");
+    throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'" + " between type '" + left.type + "' and '" + right.type + "'"));
 }
 
 export function evaluate_binary_expression(binop: BinaryExpression, env: Environment): RuntimeValue {
@@ -114,7 +116,7 @@ export function evaluate_binary_expression(binop: BinaryExpression, env: Environ
 
     const op = binop.operator;
 
-    if (left == undefined || right == undefined) throw throwError("Missing required parameter inside binary expression");
+    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
 
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") {
         if (left.type == "number" && right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
@@ -133,13 +135,13 @@ export function evaluate_logical_expression(node: LogicalExpression, env: Enviro
 
     const op = node.operator;
 
-    if (left == undefined || right == undefined) throw throwError("Missing required parameter inside logical expression");
+    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside logical expression"));
     
     
     if (op == "&&") return MK_BOOL(left.value && right.value);
     else if (op == "||") return MK_BOOL(left.value || right.value);
     else if (op == "!") {
-        if (left.type != "boolean" || right.type != "boolean") throw throwError("Invalid parameter inside logical expression. Expected boolean value.");
+        if (left.type != "boolean" || right.type != "boolean") throw throwError(new InterpreterError("Invalid parameter inside logical expression. Expected boolean value."));
         return MK_BOOL(!right.value);
     }
 
@@ -162,11 +164,11 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
         list.value[idx.value] = evaluate(node.value, env);
 
         return env.assignVar(varname, list);
-    } else throw throwError("Invalid assignment expression " + JSON.stringify(node.assignee));
+    } else throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
 }
 
 export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
-    if (node.assignee.kind != "Identifier") throw throwError("Invalid compound assignment expression " + JSON.stringify(node.assignee));
+    if (node.assignee.kind != "Identifier") throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
 
     const varname = (node.assignee as Identifier).symbol;
     const currentValue = env.lookupVar(varname);
@@ -237,18 +239,18 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
         if (!member.computed) propKey = (member.property as Identifier).symbol;
         else propKey = (member.property as StringLiteral).value;
 
-        if (!propKey) throw throwError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property));
-        if (!objProps.get(propKey)) throw throwError("Invalid object key access");
+        if (!propKey) throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
+        if (!objProps.get(propKey)) throw throwError(new InterpreterError("Invalid object key access"));
 
         return objProps.get(propKey)!;
     } else if (variable.type == "list") {
-        if (!member.computed) throw throwError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property));
+        if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
 
-        if (member.property.kind != "NumericLiteral") throw throwError("Invalid list index. Expected valid index (e.g. list[idx: number]), but received" + JSON.stringify(member.property));
+        if (member.property.kind != "NumericLiteral") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
 
         const list = variable as ListValue;
         const index = (evaluate(member.property, env) as NumberValue).value;
-        if (index < 0 || index > list.value.length - 1) throw throwError("Invalid list index. Index must be between 0 and " + (list.value.length - 1));
+        if (index < 0 || index > list.value.length - 1) throw throwError(new InterpreterError("Invalid list index. Index must be between 0 and " + (list.value.length - 1)));
 
         return list.value[index];
     }
@@ -280,7 +282,7 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
         return result;
     }
 
-    throw throwError("Cannot call value that is not a function: " + JSON.stringify(fn));
+    throw throwError(new InterpreterError("Cannot call value that is not a function: " + JSON.stringify(fn)));
 }
 
 export function evaluate_list_expression(list: ListLiteral, env: Environment): RuntimeValue {

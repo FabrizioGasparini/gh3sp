@@ -1,12 +1,12 @@
 import Environment from "./environments.ts";
 import { evaluate } from "./interpreter.ts";
-import { MK_BOOL } from "./values.ts";
+import { MK_BOOL, type NumberValue } from "./values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue } from "./values.ts";
 import { MK_NULL, MK_NUMBER, RuntimeValue } from "./values.ts";
-import { handleError } from "../utils/errors_handler.ts";
+import { handleError, MathError } from "../utils/errors_handler.ts";
 import * as readlineSync from "readline-sync";
 
-export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort, input];
+export const buildInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort, input, sqrt, rand];
 
 function throwError(error: string, line: number, column: number) {
     throw handleError(new SyntaxError(error), line, column);
@@ -345,4 +345,28 @@ function compare(a: RuntimeValue, b: RuntimeValue): number {
     if (a.type == "number" && b.type == "number") return a.value - b.value;
     else if (a.type == "string" && b.type == "string") return a.value.localeCompare(b.value);
     else return a.type == "number" ? -1 : 1;
+}
+
+function sqrt(args: RuntimeValue[], line: number, column: number) {
+    if (args[0].type != "number") throw throwError("Invalid arguments: first argument must be a number", line, column);
+
+    if (args[0].value < 0) throw handleError(new MathError("Square root of a negative number is not defined"), line, column);
+
+    return {type: "number", value:Math.sqrt(args[0].value)} as NumberValue;
+}
+
+function rand(args: RuntimeValue[], line: number, column: number) {
+    if (args[0].type != "number" || args[1].type != "number") throw throwError("Invalid arguments: first and second arguments must be numbers", line, column);
+    
+    let round = 15
+    if (args.length > 2)
+        if (args[2].type != "number") throw throwError("Invalid arguments: third argument must be a number", line, column);
+        else round = args[2].value;
+    
+    const min = args[0].value;
+    const max = args[1].value;
+
+    if (min > max) throw throwError("Minimum number must be less than or equal to the maximum number", line, column);
+
+    return {type: "number", value: Math.floor((Math.random() * (max - min) + min) * (10 ** round)) / (10 ** round)} as NumberValue;
 }

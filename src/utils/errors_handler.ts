@@ -47,3 +47,10 @@ export class LexerError extends Error {
         this.name = "LexerError";
     }
 }
+
+export class MathError extends Error {
+    constructor(error: string) {
+        super(error);
+        this.name = "MathError";
+    }
+}
