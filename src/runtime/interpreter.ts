@@ -1,8 +1,8 @@
 import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL } from "./values.ts";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral } from "../frontend/ast.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type ImportStatement } from "../frontend/ast.ts";
 import Environment from "./environments.ts";
 import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression } from "./evaluation/expressions.ts";
-import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
+import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_import_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
 import { handleError, InterpreterError } from "../utils/errors_handler.ts";
 
 let currentLine: number = 0;
@@ -15,6 +15,10 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     }
 
     switch (astNode.kind) {
+        case "Program":
+            return evaluate_program(astNode as Program, env);
+
+        
         case "NumericLiteral":
             return MK_NUMBER((astNode as NumericLiteral).value);
 
@@ -24,39 +28,43 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         case "BooleanLiteral":
             return MK_BOOL((astNode as BooleanLiteral).value);
 
+        case "ObjectLiteral":
+            return evaluate_object_expression(astNode as ObjectLiteral, env);
+
+        case "ListLiteral":
+            return evaluate_list_expression(astNode as ListLiteral, env);
+
+
         case "Identifier":
             return evaluate_identifier(astNode as Identifier, env);
+            
 
+        case "VariableDeclaration":
+            return evaluate_variable_declaration(astNode as VariableDeclaration, env);
+
+        case "FunctionDeclaration":
+            return evaluate_function_declaration(astNode as FunctionDeclaration, env);
+        
+        
         case "BinaryExpression":
             return evaluate_binary_expression(astNode as BinaryExpression, env);
 
         case "LogicalExpression":
             return evaluate_logical_expression(astNode as LogicalExpression, env);
 
-        case "Program":
-            return evaluate_program(astNode as Program, env);
-
-        case "VariableDeclaration":
-            return evaluate_variable_declaration(astNode as VariableDeclaration, env);
-
         case "AssignmentExpression":
             return evaluate_assignment_expression(astNode as AssignmentExpression, env);
 
         case "CompoundAssignmentExpression":
             return evaluate_compound_assignment_expression(astNode as CompoundAssignmentExpression, env);
-
-        case "ObjectLiteral":
-            return evaluate_object_expression(astNode as ObjectLiteral, env);
-
+        
         case "CallExpression":
             return evaluate_call_expression(astNode as CallExpression, env);
-
-        case "FunctionDeclaration":
-            return evaluate_function_declaration(astNode as FunctionDeclaration, env);
 
         case "MemberExpression":
             return evaluate_member_expression(astNode as MemberExpression, env);
 
+        
         case "IfStatement":
             return evaluate_if_statement(astNode as IfStatement, env);
 
@@ -69,9 +77,10 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         case "ForEachStatement":
             return evaluate_foreach_statement(astNode as ForEachStatement, env);
 
-        case "ListLiteral":
-            return evaluate_list_expression(astNode as ListLiteral, env);
+        case "ImportStatement":
+            return evaluate_import_statement(astNode as ImportStatement, env);
 
+        
         default:
             throw throwError(new InterpreterError(`This AST Node has not yet been setup for interpretation. ${JSON.stringify(astNode)}`));
     }

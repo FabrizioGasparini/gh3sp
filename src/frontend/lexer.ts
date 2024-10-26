@@ -21,6 +21,8 @@ export enum TokenType {
     ForEach,
     In,
 
+    Import,
+
     // Grouping & Operators
     BinaryOperator,
     CompoundOperator,
@@ -68,6 +70,8 @@ const KEYWORDS: Record<string, TokenType> = {
 
     foreach: TokenType.ForEach,
     in: TokenType.In,
+
+    import: TokenType.Import,
 };
 
 const singleCharTokens: Record<string, TokenType> = {

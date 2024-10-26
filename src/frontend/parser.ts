@@ -1,5 +1,5 @@
 import { handleError, ParserError } from "../utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type ImportStatement, type LogicalExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -67,7 +67,10 @@ export default class Parser {
     }
 
     private parse_statement(): Statement {
-        if (this.at().type == TokenType.NewLine) this.skipNewLine();
+        if (this.at().type == TokenType.NewLine) {
+            this.skipNewLine();
+            return this.parse_statement();
+        }
 
         switch (this.at().type) {
             case TokenType.Let:
@@ -85,9 +88,11 @@ export default class Parser {
                 return this.parse_for_statement();
             case TokenType.While:
                 return this.parse_while_statement();
-
             case TokenType.ForEach:
                 return this.parse_foreach_statement();
+
+            case TokenType.Import:
+                return this.parse_import_statement();
 
             default:
                 return this.parse_expression();
@@ -112,9 +117,14 @@ export default class Parser {
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
-            while (this.not_eof() && this.at().type != TokenType.CloseBrace) body.push(this.parse_statement());
+            while (this.at().type != TokenType.CloseBrace) {
+                while (this.at().type == TokenType.NewLine) this.skipNewLine();
 
-            this.expect(TokenType.CloseBrace, "Closing brace expected at the end of function declaration");
+                if (this.at().type == TokenType.CloseBrace) break;
+
+                body.push(this.parse_statement());
+            }
+            this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
         } else {
             body.push(this.parse_statement());
             this.expect(TokenType.Semicolon, "Expected ';' at the end of function declaration");
@@ -167,10 +177,6 @@ export default class Parser {
         this.isDeclaring = false;
 
         return declaration;
-    }
-
-    private parse_expression(): Expression {
-        return this.parse_compound_assignment_expression();
     }
 
     private parse_if_statement(): Statement {
@@ -362,6 +368,18 @@ export default class Parser {
         } as WhileStatement;
     }
 
+    private parse_import_statement(): Statement {
+        this.eat(); // Go past import keyword
+        const path = this.expect(TokenType.String, "Expected 'string' following import keyword").value;
+
+        return {
+            kind: "ImportStatement",
+            path,
+            line: this.currentLine,
+            column: this.currentColumn,
+        } as ImportStatement;
+    }
+
     // Order Of Operations (Expressions)
     // ===================
     // Compound Assignment Expression
@@ -376,6 +394,11 @@ export default class Parser {
     // Call Member Expression
     // Member Expression
     // Primary Expression
+
+    
+    private parse_expression(): Expression {
+        return this.parse_compound_assignment_expression();
+    }
 
     private parse_compound_assignment_expression(): Expression {
         const left = this.parse_assignment_expression();
@@ -440,7 +463,6 @@ export default class Parser {
         return left
     }
     
-    
     private parse_logical_and_expression(): Expression {
         let left = this.parse_logical_not_expression();
         
@@ -479,7 +501,6 @@ export default class Parser {
         return this.parse_equality_expression()
     }
 
-
     private parse_equality_expression(): Expression {
         let left = this.parse_object_expression();
 
@@ -499,7 +520,6 @@ export default class Parser {
 
         return left;
     }
-
 
     private parse_object_expression(): Expression {
         if (this.at().type != TokenType.OpenBrace) return this.parse_list_expression();

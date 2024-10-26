@@ -1,6 +1,8 @@
-import { AssignmentExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, VariableDeclaration, WhileStatement } from "../../frontend/ast.ts";
+import { AssignmentExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, VariableDeclaration, WhileStatement, type ImportStatement } from "../../frontend/ast.ts";
+import { InterpreterError } from "../../utils/errors_handler.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
+import { compileLibrary } from "../libraries.ts";
 import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER } from "../values.ts";
 
 export function evaluate_program(program: Program, env: Environment): RuntimeValue {
@@ -71,7 +73,7 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
 
     if (node.body.length == 0) return result;
     while (condition.value) {
-        if (iterations++ >= scope.MAX_ITERATIONS) throw throwError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)");
+        if (iterations++ >= scope.MAX_ITERATIONS) throw throwError(new InterpreterError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)"));
 
         for (const statement of node.body) result = evaluate(statement, newScope);
 
@@ -92,7 +94,7 @@ export function evaluate_while_statement(node: WhileStatement, env: Environment)
 
     if (node.body.length == 0) return result;
     while (condition.value) {
-        if (iterations++ >= env.MAX_ITERATIONS) throw throwError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)");
+        if (iterations++ >= env.MAX_ITERATIONS) throw throwError(new InterpreterError("Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (10000)"));
 
         for (const statement of node.body) result = evaluate(statement, env);
 
@@ -118,4 +120,11 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
     });
 
     return result;
+}
+
+export function evaluate_import_statement(node: ImportStatement, env: Environment): RuntimeValue {
+    if (env.parent) throw throwError(new InterpreterError("Cannot import libraries outside of the main scope"));
+
+    console.log(compileLibrary(node.path))
+    return MK_NULL()
 }

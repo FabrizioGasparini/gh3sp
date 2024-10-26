@@ -71,13 +71,16 @@ v2.0.1
 
 v2.x.x
   # Features
-    -> Square root built-in function: sqrt(num)
+    -> Native (built-in) Objects: 
+        -> Math: sqrt(num), rand(min, max, decimals), PI
     -> Math Errors handling
   # Fixes
     -> Fixed exponential expression: now elevating a number to a power works properly
+    -> Fixed multiple new lines error: now inserting multiple empty lines doesn't throw an error 
+    -> Fixed function body declaration: now function body handles new lines correctly
 
 vx.x.x-alpha
   # Features
   
   # TO-DO:
-    -> Constructors
+    -> Libraries

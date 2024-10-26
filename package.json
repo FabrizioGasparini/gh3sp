@@ -9,11 +9,12 @@
   "scripts": {
     "build": "node prebuild.js && tsc && pkg . && node postbuild.js"
   },
+  "type": "module",
   "keywords": [],
   "author": "gaspa",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^16.18.112",
+    "@types/node": "^16.18.115",
     "typescript": "^4.9.5"
   },
   "pkg": {
@@ -22,7 +23,9 @@
     ]
   },
   "dependencies": {
+    "import-sync": "^2.2.2",
     "pkg": "^5.8.1",
-    "readline-sync": "^1.4.10"
+    "readline-sync": "^1.4.10",
+    "ts-node": "^10.9.2"
   }
 }

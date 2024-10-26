@@ -44,6 +44,11 @@ export function MK_BOOL(b = false) {
 export interface ObjectValue extends RuntimeValue {
     type: "object";
     properties: Map<string, RuntimeValue>;
+    native: boolean;
+}
+
+export function MK_NATIVE_OBJECT(props: Map<string, RuntimeValue>) {
+    return { type: "object", properties: props, native: true } as ObjectValue;
 }
 
 export interface ListValue extends RuntimeValue {
@@ -57,7 +62,6 @@ export type FunctionCall = (args: RuntimeValue[], line: number, column: number, 
 export function MK_NATIVE_FUNCTION(call: FunctionCall) {
     return { type: "native-function", call, name: call.name } as NativeFunctionValue;
 }
-
 export interface NativeFunctionValue extends RuntimeValue {
     type: "native-function";
     call: FunctionCall;

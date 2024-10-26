@@ -191,7 +191,7 @@ export function evaluate_compound_assignment_expression(node: CompoundAssignment
 }
 
 export function evaluate_object_expression(obj: ObjectLiteral, env: Environment): RuntimeValue {
-    const object = { type: "object", properties: new Map() } as ObjectValue;
+    const object = { type: "object", properties: new Map(), native: false } as ObjectValue;
     for (const { key, value } of obj.properties) {
         const runtimeVal = value == undefined ? env.lookupVar(key) : evaluate(value, env);
 
@@ -218,20 +218,24 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
     }
     // ============================= \\
 
+    
     const varname = (object as Identifier).symbol;
     const variable = env.lookupVar(varname);
 
+    
+    if(member.computed && (variable as ObjectValue).native) throw throwError(new InterpreterError("Invalid native object key access. Expected valid key (e.g. obj.key)"))
     if (variable.type == "object") {
         let objProps = (variable as ObjectValue).properties;
         for (const prop of props) {
             if (member.computed) {
+                
                 if (objProps.get((prop as StringLiteral).value)) objProps = (objProps.get((prop as StringLiteral).value) as ObjectValue).properties;
                 else if (objProps.get(env.lookupVar((prop as Identifier).symbol).value)) objProps = (objProps.get(env.lookupVar((prop as Identifier).symbol).value) as ObjectValue).properties;
             } else {
                 if (objProps.get((prop as Identifier).symbol)) objProps = (objProps.get((prop as Identifier).symbol) as ObjectValue).properties;
             }
         }
-
+        
         let propKey: string;
 
         if (member.computed && member.property.kind == "Identifier") member.property = { kind: "StringLiteral", value: env.lookupVar((member.property as Identifier).symbol).value } as StringLiteral;

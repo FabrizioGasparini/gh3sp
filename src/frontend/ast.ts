@@ -7,6 +7,7 @@ export type NodeType =
     | "ForStatement"
     | "ForEachStatement"
     | "WhileStatement"
+    | "ImportStatement"
 
     // Expressions
     | "AssignmentExpression"
@@ -119,6 +120,11 @@ export interface ForEachStatement extends Statement {
     declared: boolean;
     list: Identifier;
     body: Statement[];
+}
+
+export interface ImportStatement extends Statement {
+    kind: "ImportStatement";
+    path: string;
 }
 
 export interface Identifier extends Expression {

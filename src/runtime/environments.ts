@@ -1,7 +1,8 @@
 import { InterpreterError } from "../utils/errors_handler.ts";
-import { buildInFunctions } from "./builtin_functions.ts";
+import { builtInFunctions } from "./built-in/functions.ts";
+import { builtInObjects } from "./built-in/objects.ts";
 import { throwError } from "./interpreter.ts";
-import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
+import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NATIVE_OBJECT, MK_NULL, RuntimeValue } from "./values.ts";
 
 export function createGlobalEnvironment() {
     const env = new Environment();
@@ -11,17 +12,18 @@ export function createGlobalEnvironment() {
     env.declareVar("null", MK_NULL(), true);
 
     // Declare native methods
-    for (const func of buildInFunctions) env.declareVar(func.name, MK_NATIVE_FUNCTION(func), true);
+    for (const func of builtInFunctions) env.declareVar(func.name, MK_NATIVE_FUNCTION(func), true);
+    for (const obj of builtInObjects) env.declareVar(obj.name, MK_NATIVE_OBJECT(obj.properties), true);
 
     return env;
 }
 
 export default class Environment {
-    private parent?: Environment;
+    public parent?: Environment;
+    public MAX_ITERATIONS: number;
+
     private variables: Map<string, RuntimeValue>;
     private constants: Set<string>;
-
-    public MAX_ITERATIONS: number;
 
     constructor(parentENV?: Environment) {
         this.parent = parentENV;
