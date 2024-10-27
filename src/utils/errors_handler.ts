@@ -28,8 +28,8 @@ export function handleError(error: Error, line: number, column: number) {
 }
 
 export class ParserError extends Error {
-    constructor(error: string, type: TokenType) {
-        super(`${error}. Expecting: ${TokenType[type]}`);
+    constructor(error: string, type: TokenType = TokenType.EOF) {
+        super(type == TokenType.EOF ? `${error}` : `${error}. Expecting: ${TokenType[type]}`);
         this.name = "ParserError";
     }
 }
@@ -52,5 +52,12 @@ export class MathError extends Error {
     constructor(error: string) {
         super(error);
         this.name = "MathError";
+    }
+}
+
+export class ImportError extends Error {
+    constructor(error: string, path: string) {
+        super(`${error}: ${path}`);
+        this.name = "ImportError";
     }
 }

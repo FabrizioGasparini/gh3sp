@@ -1,8 +1,8 @@
+import { built_in_libraries } from "./built-in/libraries.ts";
 import { InterpreterError } from "../utils/errors_handler.ts";
-import { builtInFunctions } from "./built-in/functions.ts";
-import { builtInObjects } from "./built-in/objects.ts";
+import { built_in_functions } from "./built-in/functions.ts";
 import { throwError } from "./interpreter.ts";
-import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NATIVE_OBJECT, MK_NULL, RuntimeValue } from "./values.ts";
+import { MK_BOOL, MK_NATIVE_FUNCTION, MK_NULL, RuntimeValue } from "./values.ts";
 
 export function createGlobalEnvironment() {
     const env = new Environment();
@@ -12,8 +12,8 @@ export function createGlobalEnvironment() {
     env.declareVar("null", MK_NULL(), true);
 
     // Declare native methods
-    for (const func of builtInFunctions) env.declareVar(func.name, MK_NATIVE_FUNCTION(func), true);
-    for (const obj of builtInObjects) env.declareVar(obj.name, MK_NATIVE_OBJECT(obj.properties), true);
+    for (const func of built_in_functions) env.declareVar(func.name, MK_NATIVE_FUNCTION(func), true);
+    for (const lib of built_in_libraries) env.declareVar(lib.name, lib.object, true);
 
     return env;
 }

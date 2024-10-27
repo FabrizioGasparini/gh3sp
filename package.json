@@ -9,7 +9,6 @@
   "scripts": {
     "build": "node prebuild.js && tsc && pkg . && node postbuild.js"
   },
-  "type": "module",
   "keywords": [],
   "author": "gaspa",
   "license": "ISC",
@@ -23,6 +22,7 @@
     ]
   },
   "dependencies": {
+    "gh3-lib": "^1.0.1",
     "import-sync": "^2.2.2",
     "pkg": "^5.8.1",
     "readline-sync": "^1.4.10",

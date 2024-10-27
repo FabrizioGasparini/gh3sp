@@ -1,45 +1,41 @@
-import Environment from "../environments.ts";
-import { evaluate } from "../interpreter.ts";
-import { MK_BOOL } from "../values.ts";
+import { MK_BOOL, type FunctionCall } from "../values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values.ts";
 import { handleError } from "../../utils/errors_handler.ts";
 import * as readlineSync from "readline-sync";
-
-export const builtInFunctions = [time, str, int, type, print, length, push, pop, shift, unshift, slice, contains, reverse, filter, map, sort, input];
 
 function throwError(error: string, line: number, column: number) {
     throw handleError(new SyntaxError(error), line, column);
 }
 
-function time() {
+const time: FunctionCall = () => {
     return MK_NUMBER(Date.now());
-}
+};
 
-function str(args: RuntimeValue[], line: number, column: number) {
+const str: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     try {
         return MK_STRING(args[0].value.toString());
     } catch {
         throw throwError(`Invalid argument passed inside 'str' function`, line, column);
     }
-}
+};
 
-function int(args: RuntimeValue[], line: number, column: number) {
+const int: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     try {
         return MK_NUMBER(parseInt(args[0].value));
     } catch {
         throw throwError(`Invalid argument passed inside 'int' function`, line, column);
     }
-}
+};
 
-function type(args: RuntimeValue[], line: number, column: number) {
+const type: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     try {
         return MK_STRING(args[0].type);
     } catch {
         throw throwError(`Invalid argument passed inside 'type' function`, line, column);
     }
-}
+};
 
-function print(args: RuntimeValue[]) {
+const print: FunctionCall = (args: RuntimeValue[]) => {
     const params = [];
     for (const arg of args) {
         const test = parse(arg);
@@ -48,9 +44,9 @@ function print(args: RuntimeValue[]) {
 
     console.log(...params);
     return MK_NULL();
-}
+};
 
-function input(args: RuntimeValue[], line: number, column: number): RuntimeValue {
+const input: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     let string = "";
     if (args.length > 0)
         if (args[0].type != "string") throw throwError("Invalid argument passed inside 'input' function", line, column);
@@ -66,7 +62,7 @@ function input(args: RuntimeValue[], line: number, column: number): RuntimeValue
     }
 
     return result;
-}
+};
 
 function isBool(src: string) {
     return src == "true" || src == "false";
@@ -137,13 +133,13 @@ function parse_list(list: ListValue) {
     return values;
 }
 
-function length(args: RuntimeValue[], line: number, column: number) {
+const length: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     try {
         return MK_NUMBER(parse_length(args[0], line, column));
     } catch {
         throw throwError(`Invalid argument passed inside 'length' function`, line, column);
     }
-}
+};
 
 function parse_length(node: RuntimeValue, line: number, column: number) {
     switch (node.type) {
@@ -162,186 +158,4 @@ function parse_length(node: RuntimeValue, line: number, column: number) {
     }
 }
 
-// Lists Functions
-
-function push(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-    const elem = args[1];
-
-    list.value.push(elem);
-
-    return env.assignVar(list.name!, list);
-}
-
-function pop(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-    const value = list.value.pop();
-
-    env.assignVar(list.name!, list);
-
-    if (value == undefined) return MK_NULL();
-
-    return value;
-}
-
-function shift(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-    const value = list.value.shift();
-
-    env.assignVar(list.name!, list);
-
-    if (value == undefined) return MK_NULL();
-
-    return value;
-}
-
-function unshift(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-
-    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
-    list.value.unshift(args[1]);
-
-    return env.assignVar(list.name!, list);
-}
-
-function slice(args: RuntimeValue[], line: number, column: number) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    let start = 0;
-    if (args.length > 1)
-        if (args[1].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
-        else start = args[1].value;
-
-    let end = args[0].value.length;
-    if (args.length > 2)
-        if (args[2].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
-        else end = args[2].value;
-
-    const list = args[0] as ListValue;
-
-    return {
-        type: "list",
-        value: list.value.slice(start, end),
-        name: list.name,
-    } as ListValue;
-}
-
-function contains(args: RuntimeValue[], line: number, column: number) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-
-    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
-    for (const value of list.value) {
-        if (value.type == args[1].type && value.value == args[1].value) return MK_BOOL(true);
-    }
-
-    return MK_BOOL(false);
-}
-
-function reverse(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
-    const list = args[0] as ListValue;
-    list.value.reverse();
-
-    return env.assignVar(list.name!, list);
-}
-
-function filter(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
-
-    const list = args[0] as ListValue;
-    const fn = args[1] as FunctionValue;
-
-    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
-    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
-
-    const scope = new Environment(env);
-
-    const varname = fn.parameters[0];
-    scope.declareVar(varname, MK_NULL(), false);
-
-    const values: RuntimeValue[] = [];
-    for (let i = 0; i < list.value.length; i++) {
-        const value = list.value[i];
-        scope.assignVar(varname, value);
-
-        if (evaluate(fn.body[0], scope).value == true) values.push(value);
-    }
-
-    return {
-        type: "list",
-        value: values,
-        name: list.name,
-    } as ListValue;
-}
-
-function map(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
-
-    const list = args[0] as ListValue;
-    const fn = args[1] as FunctionValue;
-
-    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
-    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
-
-    const scope = new Environment(env);
-
-    const varname = fn.parameters[0];
-    scope.declareVar(varname, MK_NULL(), false);
-
-    const values: RuntimeValue[] = [];
-    for (let i = 0; i < list.value.length; i++) {
-        const value = list.value[i];
-        scope.assignVar(varname, value);
-
-        values.push(evaluate(fn.body[0], scope).value);
-    }
-
-    return {
-        type: "list",
-        value: values,
-        name: list.name,
-    } as ListValue;
-}
-
-function sort(args: RuntimeValue[], line: number, column: number, env: Environment) {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    let inverted: boolean = false;
-    if (args.length > 1) {
-        if (args[1].type != "boolean") throw throwError("Invalid arguments: second argument must be a boolean", line, column);
-        inverted = args[1].value;
-    }
-    const list = args[0] as ListValue;
-
-    for (let i = 0; i < list.value.length - 1; i++) {
-        for (let j = 0; j < list.value.length - i - 1; j++) {
-            const comp = compare(list.value[j], list.value[j + 1]);
-            if (inverted ? comp < 0 : comp > 0) {
-                const temp = list.value[j];
-                list.value[j] = list.value[j + 1];
-                list.value[j + 1] = temp;
-            }
-        }
-    }
-
-    return env.assignVar(list.name!, list);
-}
-
-function compare(a: RuntimeValue, b: RuntimeValue): number {
-    if (a.type == "number" && b.type == "number") return a.value - b.value;
-    else if (a.type == "string" && b.type == "string") return a.value.localeCompare(b.value);
-    else return a.type == "number" ? -1 : 1;
-}
+export const built_in_functions: FunctionCall[] = [time, str, int, type, print, length, input];

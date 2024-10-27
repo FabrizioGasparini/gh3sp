@@ -250,10 +250,10 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
     } else if (variable.type == "list") {
         if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
 
-        if (member.property.kind != "NumericLiteral") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
+        const index = (evaluate(member.property, env) as NumberValue).value;
+        if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number])"));
 
         const list = variable as ListValue;
-        const index = (evaluate(member.property, env) as NumberValue).value;
         if (index < 0 || index > list.value.length - 1) throw throwError(new InterpreterError("Invalid list index. Index must be between 0 and " + (list.value.length - 1)));
 
         return list.value[index];

@@ -69,11 +69,40 @@ v2.0.1
 
 == ^^ RELEASED ^^ ==
 
-v2.x.x
+v2.1.0
   # Features
-    -> Native (built-in) Objects: 
-        -> Math: sqrt(num), rand(min, max, decimals), PI
+    -> Built-In, Default and User-Made libraries: // Built-In libraries are already implemented in the code, Default's have to be imported
+        -> List: push(list, value) // Built-In
+          -> pop(list)
+          -> shift(list)
+          -> unshift(list, value)
+          -> slice(list, start, end?)
+          -> contains(list, value)
+          -> reverse(list, value)
+          -> filter(list, function)
+          -> map(list, function)
+          -> sort(list, inverted?)
+        -> Math: // Default
+          -> sqrt(num)
+          -> pow(base, exponent)
+          -> rand(min, max, decimals), 
+          -> PI
+        -> Math: // Default
+          -> sqrt(num)
+          -> pow(base, exponent)
+          -> rand(min, max, decimals), 
+          -> PI
+    
+    -> Library Builder
+    -> npm 'gh3-lib' Library
+    -> 
+
+    
+    
     -> Math Errors handling
+  
+  # Changes
+    -> List functions now uses the new Default Library methods: List.pop(list_var), List.push(list_var, value)
   # Fixes
     -> Fixed exponential expression: now elevating a number to a power works properly
     -> Fixed multiple new lines error: now inserting multiple empty lines doesn't throw an error 

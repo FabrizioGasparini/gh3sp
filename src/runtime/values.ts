@@ -47,7 +47,7 @@ export interface ObjectValue extends RuntimeValue {
     native: boolean;
 }
 
-export function MK_NATIVE_OBJECT(props: Map<string, RuntimeValue>) {
+export function MK_OBJECT(props: Map<string, RuntimeValue>) {
     return { type: "object", properties: props, native: true } as ObjectValue;
 }
 

@@ -1,5 +1,8 @@
+import type Environment from "../runtime/environments.ts";
+import { evaluate } from "../runtime/interpreter.ts";
+import { compileLibrary } from "../runtime/libraries.ts";
 import { handleError, ParserError } from "../utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type ImportStatement, type LogicalExpression } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -8,6 +11,12 @@ export default class Parser {
     private isDeclaring: boolean = false;
     private currentLine: number = 1;
     private currentColumn: number = 1;
+
+    private env: Environment;
+
+    constructor(env: Environment) {
+        this.env = env;
+    }
 
     private not_eof(): boolean {
         return this.tokens[0].type != TokenType.EOF;
@@ -35,16 +44,26 @@ export default class Parser {
         return prev;
     }
 
-    public produceAST(sourceCode: string): Program {
+    public async produceAST(sourceCode: string) {
         this.tokens = tokenize(sourceCode);
 
+        while (this.at().type == TokenType.Import) {
+            await this.parse_import_statement()
+            while (this.at().type == TokenType.NewLine) this.skipNewLine();
+        }
+
+        return evaluate(this.parse_program(), this.env)
+    }
+
+    private parse_program(): Program {
         const program: Program = {
             kind: "Program",
             body: [],
         };
-
+        
         // Parse until END OF FILE
         while (this.not_eof()) {
+
             if (this.at().type == TokenType.NewLine) {
                 this.skipNewLine();
                 if (!this.not_eof()) break;
@@ -92,7 +111,7 @@ export default class Parser {
                 return this.parse_foreach_statement();
 
             case TokenType.Import:
-                return this.parse_import_statement();
+                throw this.throwError(new ParserError("Libraries can only be imported at the start of the program."))
 
             default:
                 return this.parse_expression();
@@ -368,16 +387,12 @@ export default class Parser {
         } as WhileStatement;
     }
 
-    private parse_import_statement(): Statement {
+    private async parse_import_statement() {
         this.eat(); // Go past import keyword
         const path = this.expect(TokenType.String, "Expected 'string' following import keyword").value;
 
-        return {
-            kind: "ImportStatement",
-            path,
-            line: this.currentLine,
-            column: this.currentColumn,
-        } as ImportStatement;
+        const library_objects = await compileLibrary(path);
+        for(const obj of library_objects) this.env.declareVar(obj.name, obj.object, true);
     }
 
     // Order Of Operations (Expressions)
@@ -759,3 +774,4 @@ export default class Parser {
         }
     }
 }
+
