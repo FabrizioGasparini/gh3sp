@@ -50,7 +50,7 @@ const choose: FunctionCall = (args: RuntimeValue[], line: number, column: number
 }
 
 export default {
-    "Random":{
+    Random:{
         functions: {
             rand,
             choose

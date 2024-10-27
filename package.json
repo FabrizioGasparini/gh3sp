@@ -9,6 +9,7 @@
   "scripts": {
     "build": "node prebuild.js && tsc && pkg . && node postbuild.js"
   },
+  "type": "module",
   "keywords": [],
   "author": "gaspa",
   "license": "ISC",

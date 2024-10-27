@@ -19,7 +19,7 @@ const pow: FunctionCall = (args: RuntimeValue[], line: number, column: number) =
 }
 
 export default {
-    "Math": {
+    Math: {
         functions: {
             sqrt,
             pow,
@@ -28,4 +28,4 @@ export default {
             PI: MK_NUMBER(3.141592653589793),
         },
     }
-};
+}
