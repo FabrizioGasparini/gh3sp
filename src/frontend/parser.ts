@@ -44,12 +44,16 @@ export default class Parser {
         return prev;
     }
 
+    private isEndOfLine(): boolean {
+        return this.at().type == TokenType.NewLine
+    }
+
     public async produceAST(sourceCode: string) {
         this.tokens = tokenize(sourceCode);
 
         while (this.at().type == TokenType.Import) {
             await this.parse_import_statement()
-            while (this.at().type == TokenType.NewLine) this.skipNewLine();
+            while (this.isEndOfLine()) this.skipNewLine();
         }
 
         return evaluate(this.parse_program(), this.env)
@@ -64,7 +68,7 @@ export default class Parser {
         // Parse until END OF FILE
         while (this.not_eof()) {
 
-            if (this.at().type == TokenType.NewLine) {
+            if (this.isEndOfLine()) {
                 this.skipNewLine();
                 if (!this.not_eof()) break;
             }
@@ -86,7 +90,7 @@ export default class Parser {
     }
 
     private parse_statement(): Statement {
-        if (this.at().type == TokenType.NewLine) {
+        if (this.isEndOfLine()) {
             this.skipNewLine();
             return this.parse_statement();
         }
@@ -137,17 +141,17 @@ export default class Parser {
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
             while (this.at().type != TokenType.CloseBrace) {
-                while (this.at().type == TokenType.NewLine) this.skipNewLine();
-
+                while (this.isEndOfLine()) this.skipNewLine();
+                
                 if (this.at().type == TokenType.CloseBrace) break;
-
+                
                 body.push(this.parse_statement());
             }
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
-        } else {
-            body.push(this.parse_statement());
-            this.expect(TokenType.Semicolon, "Expected ';' at the end of function declaration");
-        }
+        } else if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
+            body.push(this.parse_statement());     
+        } else this.throwError(new SyntaxError("Expected '{' of '=>' after function arguments declaration"))
 
         const fn = {
             kind: "FunctionDeclaration",
@@ -215,32 +219,30 @@ export default class Parser {
             while (this.at().type != TokenType.CloseBrace) thenBranch.push(this.parse_statement());
 
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of if block");
-        } else {
+        } else if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
             thenBranch.push(this.parse_statement());
-
-            if (this.at().type != TokenType.Else) this.expect(TokenType.Semicolon, "Expected ';' at the end of if statement");
-        }
-
+        } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of if statement"))
+        
         const elseBranch: Statement[] | undefined = [];
         if (this.at().type == TokenType.Else) {
             this.eat();
-
+            
             if (this.at().type == TokenType.If) elseBranch.push(this.parse_if_statement());
             else {
                 if (this.at().type == TokenType.OpenBrace) {
                     this.expect(TokenType.OpenBrace, "Expected '{' following if condition");
-
+                    
                     while (this.at().type != TokenType.CloseBrace) elseBranch.push(this.parse_statement());
-
+                    
                     this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block");
-                } else {
-                    elseBranch.push(this.parse_statement());
-
-                    if (this.at().type != TokenType.Else) this.expect(TokenType.Semicolon, "Expected ';' at the end of else statement");
-                }
+                } else if (this.at().type == TokenType.ArrowOperator) {
+                    this.eat(); // Go past =>
+                    elseBranch.push(this.parse_statement());            
+                } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of else statement"))
             }
         }
-
+        
         return {
             kind: "IfStatement",
             condition,
@@ -250,12 +252,12 @@ export default class Parser {
             column: this.currentColumn,
         } as IfStatement;
     }
-
+    
     private parse_for_statement(): Statement {
         this.eat(); // Go past for keyword
-
+        
         this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
-
+        
         let assignment: Statement;
         let declared: boolean;
         if (this.at().type == TokenType.Let) {
@@ -268,41 +270,41 @@ export default class Parser {
             assignment = this.parse_assignment_expression();
             declared = false;
         }
-
+        
         this.expect(TokenType.Semicolon, "Expected ';' following for assignment");
         const condition = this.parse_expression();
-
+        
         this.expect(TokenType.Semicolon, "Expected ';' following for condition");
-
+        
         const increment = this.parse_expression();
-
+        
         this.expect(TokenType.CloseParen, "Expected ')' following for compound assignment");
-
+        
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
-            while (this.at().type != TokenType.CloseBrace) {
-                while (this.at().type == TokenType.NewLine) this.skipNewLine();
-
-                if (this.at().type == TokenType.CloseBrace) break;
-
-                body.push(this.parse_statement());
-            }
-            this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
-        } else {
-            body.push(this.parse_statement());
-            this.expect(TokenType.Semicolon, "Expected ';' at the end of for declaration");
-        }
-
+                while (this.at().type != TokenType.CloseBrace) {
+                    while (this.isEndOfLine()) this.skipNewLine();
+                    
+                    if (this.at().type == TokenType.CloseBrace) break;
+                    
+                    body.push(this.parse_statement());
+                }
+                this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
+        } else if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
+            body.push(this.parse_statement());  
+        } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of for statement"))
+        
         return {
             kind: "ForStatement",
             assignment,
-            declared,
-            condition,
-            increment,
-            body,
-            line: this.currentLine,
-            column: this.currentColumn,
+        declared,
+        condition,
+        increment,
+        body,
+        line: this.currentLine,
+        column: this.currentColumn,
         } as ForStatement;
     }
 
@@ -329,7 +331,7 @@ export default class Parser {
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
             while (this.at().type != TokenType.CloseBrace) {
-                while (this.at().type == TokenType.NewLine) this.skipNewLine();
+                while (this.isEndOfLine()) this.skipNewLine();
 
                 if (this.at().type == TokenType.CloseBrace) break;
 
@@ -337,10 +339,10 @@ export default class Parser {
             }
 
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
-        } else {
-            body.push(this.parse_statement());
-            this.expect(TokenType.Semicolon, "Expected ';' at the end of for declaration");
-        }
+        } else if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
+            body.push(this.parse_statement());            
+        } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of foreach statement"))
 
         return {
             kind: "ForEachStatement",
@@ -365,7 +367,7 @@ export default class Parser {
         if (this.at().type == TokenType.OpenBrace) {
             this.eat(); // Go past {
             while (this.at().type != TokenType.CloseBrace) {
-                while (this.at().type == TokenType.NewLine) this.skipNewLine();
+                while (this.isEndOfLine()) this.skipNewLine();
 
                 if (this.at().type == TokenType.CloseBrace) break;
 
@@ -373,10 +375,10 @@ export default class Parser {
             }
 
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
-        } else {
-            body.push(this.parse_statement());
-            this.expect(TokenType.Semicolon, "Expected ';' at the end of while declaration");
-        }
+        } else if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
+            body.push(this.parse_statement());            
+        } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of while statement"))
 
         return {
             kind: "WhileStatement",
@@ -543,7 +545,11 @@ export default class Parser {
         const properties = new Array<Property>();
 
         while (this.not_eof() && this.at().type != TokenType.CloseBrace) {
-            const key = this.expect(TokenType.Identifier, "Object key expected").value;
+            while (this.isEndOfLine()) this.skipNewLine();
+
+            let key = "";
+            if (this.at().type == TokenType.Identifier || this.at().type == TokenType.String) key = this.eat().value;
+            else this.throwError(new ParserError("Object key expected", TokenType.Identifier));
             if (this.at().type == TokenType.Comma) {
                 this.eat(); // Go past comma
                 properties.push({ key, kind: "Property" });
@@ -557,6 +563,7 @@ export default class Parser {
             const value = this.parse_expression();
 
             properties.push({ key, kind: "Property", value: value });
+            while (this.isEndOfLine()) this.skipNewLine();
             if (this.at().type != TokenType.CloseBrace) {
                 this.expect(TokenType.Comma, "Expected comma or closing brace following property");
             }

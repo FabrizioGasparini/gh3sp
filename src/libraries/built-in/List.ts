@@ -191,7 +191,7 @@ function compare(a: RuntimeValue, b: RuntimeValue): number {
 }
 
 export default {
-    "List": {
+    List: {
         functions: {
             push,
             pop,

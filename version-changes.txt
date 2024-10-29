@@ -95,9 +95,6 @@ v2.1.0
     
     -> Library Builder
     -> npm 'gh3-lib' Library
-    -> 
-
-    
     
     -> Math Errors handling
   
@@ -108,8 +105,26 @@ v2.1.0
     -> Fixed multiple new lines error: now inserting multiple empty lines doesn't throw an error 
     -> Fixed function body declaration: now function body handles new lines correctly
 
-vx.x.x-alpha
+v2.1.1
+  # Features
+    -> String Library:
+      -> join(string_1, string_2, ..., string_n)
+      -> upper(value: string)
+      -> lower(value: string)
+    -> JSON Library:
+      -> parse(value: string): object
+      -> stringify(value: object): string
+    -> GMath Library:
+      -> convert(value: string, starting_base: number, arrive_base: number)
+  # Changes
+    -> Single line expressions (if, for, foreach, while, function) now require an Arrow Function before the expression: if(a == b) => print("a equals b")
+    -> Variable names now support "_" symbol
+    -> Object keys now can be of 'string' type
+  # Fixes:
+    -> Fixed comparison operations between lists: Now comparing lists (==, !=) works as expected
+
+
+vx.x.x
   # Features
   
   # TO-DO:
-    -> Libraries

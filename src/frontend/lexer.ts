@@ -29,6 +29,7 @@ export enum TokenType {
     LogicOperator,
     Equal,
     SpreadOperator,
+    ArrowOperator,
 
     // Comparison Operators
     EqualEqual,
@@ -102,7 +103,9 @@ const doubleCharTokens: Record<string, TokenType> = {
     "!=": TokenType.NotEqual,
     "<=": TokenType.LessThanOrEqual,
     ">=": TokenType.GreaterThenOrEqual,
+
     "//": TokenType.BinaryOperator,
+
     "++": TokenType.CompoundOperator,
     "--": TokenType.CompoundOperator,
     "+=": TokenType.CompoundOperator,
@@ -111,8 +114,11 @@ const doubleCharTokens: Record<string, TokenType> = {
     "/=": TokenType.CompoundOperator,
     "%=": TokenType.CompoundOperator,
     "^=": TokenType.CompoundOperator,
+
     "&&": TokenType.LogicOperator,
     "||": TokenType.LogicOperator,
+
+    "=>": TokenType.ArrowOperator,
 };
 
 const tripleCharTokens: Record<string, TokenType> = {
@@ -132,7 +138,7 @@ function token(value = "", type: TokenType): Token {
 
 // Check Functions
 function isAlpha(src: string) {
-    return src.toUpperCase() != src.toLocaleLowerCase();
+    return src.toUpperCase() != src.toLocaleLowerCase() || src[0] == "_";
 }
 
 function isSkippable(src: string) {

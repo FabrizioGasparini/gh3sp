@@ -11,7 +11,7 @@ const time: FunctionCall = () => {
     return MK_NUMBER(Date.now());
 };
 
-const str: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
+export const str: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     try {
         return MK_STRING(args[0].value.toString());
     } catch {
@@ -80,7 +80,7 @@ function parseNumber(value: string) {
     else return parseFloat(value);
 }
 
-function parse(node: RuntimeValue) {
+export function parse(node: RuntimeValue) {
     switch (node.type) {
         case "number":
         case "string":
@@ -101,14 +101,14 @@ function parse(node: RuntimeValue) {
     }
 }
 
-function parse_object(obj: ObjectValue) {
+export function parse_object(obj: ObjectValue) {
     const object: { [key: string]: RuntimeValue } = {};
 
     for (const [key, value] of obj.properties.entries()) {
         object[key] = parse(value as RuntimeValue);
     }
 
-    return object;
+    return JSON.stringify(object);
 }
 
 function parse_function(fn: FunctionValue) {

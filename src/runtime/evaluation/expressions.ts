@@ -73,14 +73,31 @@ function evaluate_list_binary_expression(left: ListValue, right: ListValue, oper
     }
 }
 
+function compare_lists(a: RuntimeValue[], b: RuntimeValue[]): boolean {
+    if (a.length != b.length) return false;
+    
+    for (let i = 0; i < a.length - 1; i++)
+    {
+        if (a[i].value != b[i].value) return false;
+    }
+
+    return true;
+}
+
 function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
     switch (operator) {
         case "==":
-            if (left.type == right.type) return MK_BOOL(left.value == right.value);
+            if (left.type == right.type) {
+                if (left.type == "list") return MK_BOOL(compare_lists(left.value, right.value))
+                    else return MK_BOOL(left.value == right.value);
+            }
             break;
-
+            
         case "!=":
-            if (left.type == right.type) return MK_BOOL(left.value != right.value);
+            if (left.type == right.type) {
+                if (left.type == "list") return MK_BOOL(!compare_lists(left.value, right.value))
+                    else return MK_BOOL(left.value != right.value);
+            }
             break;
 
         case ">=":
@@ -110,11 +127,11 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
     throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'" + " between type '" + left.type + "' and '" + right.type + "'"));
 }
 
-export function evaluate_binary_expression(binop: BinaryExpression, env: Environment): RuntimeValue {
-    const left = evaluate(binop.left, env);
-    const right = evaluate(binop.right, env);
+export function evaluate_binary_expression(node: BinaryExpression, env: Environment): RuntimeValue {
+    const left = evaluate(node.left, env);
+    const right = evaluate(node.right, env);
 
-    const op = binop.operator;
+    const op = node.operator;
 
     if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
 
