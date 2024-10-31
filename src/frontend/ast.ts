@@ -16,6 +16,7 @@ export type NodeType =
     | "LogicalExpression"
     | "MemberExpression"
     | "CallExpression"
+    | "TernaryExpression"
 
     // Literals
     | "ObjectLiteral"
@@ -90,6 +91,13 @@ export interface MemberExpression extends Expression {
     object: Expression;
     property: Expression;
     computed: boolean;
+}
+
+export interface TernaryExpression extends Expression {
+    kind: "TernaryExpression";
+    condition: Expression;
+    left: Expression;
+    right: Expression;
 }
 
 export interface IfStatement extends Statement {

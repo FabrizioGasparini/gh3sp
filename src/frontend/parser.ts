@@ -2,7 +2,7 @@ import type Environment from "../runtime/environments.ts";
 import { evaluate } from "../runtime/interpreter.ts";
 import { compileLibrary } from "../runtime/libraries.ts";
 import { handleError, ParserError } from "../utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -23,6 +23,7 @@ export default class Parser {
     }
 
     private at() {
+        while(this.tokens[0].type == TokenType.NewLine) this.skipNewLine()
         return this.tokens[0] as Token;
     }
 
@@ -401,9 +402,11 @@ export default class Parser {
     // ===================
     // Compound Assignment Expression
     // Assignment Expression
-    // Equality Expression
     // Logical AND Expression
     // Logical OR Expression
+    // Nullish Coalescing Expression
+    // Ternary Expression
+    // Equality Expression
     // Object Expression
     // Additive Expression
     // Multiplicative Expression
@@ -503,7 +506,7 @@ export default class Parser {
     private parse_logical_not_expression(): Expression {
         if (this.at().type == TokenType.LogicOperator && this.at().value == "!") {
             const operator = this.eat().value;
-            const right = this.parse_equality_expression();
+            const right = this.parse_nullish_coalescing_expression();
 
             return {
                 kind: "LogicalExpression",
@@ -515,7 +518,53 @@ export default class Parser {
             } as LogicalExpression;
         }
 
-        return this.parse_equality_expression()
+        return this.parse_nullish_coalescing_expression()
+    }
+
+    private parse_nullish_coalescing_expression(): Expression {        
+        const left = this.parse_ternary_expression();
+
+        if (this.at().type == TokenType.BinaryOperator && this.at().value == "??")
+        {
+            this.eat() // Go past ??
+            const right = this.parse_equality_expression()
+
+            return {
+                kind: "BinaryExpression",
+                operator: "??",
+                left,
+                right,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as BinaryExpression
+        }
+
+        return left;
+    }
+        
+    private parse_ternary_expression(): Expression {        
+        const condition = this.parse_equality_expression();
+
+        if (this.at().type == TokenType.QuestionMark)
+        {
+            this.eat() // Go past ?
+            const left = this.parse_equality_expression()
+
+            this.expect(TokenType.Colon, "Expected ':' between ternary expressions values")
+
+            const right = this.parse_equality_expression()
+
+            return {
+                kind: "TernaryExpression",
+                condition,
+                left,
+                right,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as TernaryExpression
+        }
+
+        return condition;
     }
 
     private parse_equality_expression(): Expression {

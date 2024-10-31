@@ -1,4 +1,4 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression } from "../../frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type TernaryExpression } from "../../frontend/ast.ts";
 import { InterpreterError, MathError } from "../../utils/errors_handler.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
@@ -130,10 +130,12 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
 export function evaluate_binary_expression(node: BinaryExpression, env: Environment): RuntimeValue {
     const left = evaluate(node.left, env);
     const right = evaluate(node.right, env);
-
+    
     const op = node.operator;
 
     if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
+
+    if (op == "??") return left.type == "null" ? right : left;
 
     if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") {
         if (left.type == "number" && right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
@@ -176,35 +178,59 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
         return env.assignVar(varname, evaluate(node.value, env));
     } else if (node.assignee.kind == "MemberExpression") {
         const varname = ((node.assignee as MemberExpression).object as Identifier).symbol;
-        const list = env.lookupVar(varname) as ListValue;
-        const idx = evaluate((node.assignee as MemberExpression).property, env) as NumberValue;
-        list.value[idx.value] = evaluate(node.value, env);
-
-        return env.assignVar(varname, list);
+        const variable = env.lookupVar(varname)
+        if(variable.type == "list") {
+            const list = env.lookupVar(varname) as ListValue;
+            const idx = evaluate((node.assignee as MemberExpression).property, env) as NumberValue;
+            list.value[idx.value] = evaluate(node.value, env);
+            return env.assignVar(varname, list);
+        } else if (variable.type == "object") {
+            const obj = env.lookupVar(varname) as ObjectValue;
+            const key = ((node.assignee as MemberExpression).property as Identifier).symbol
+            obj.properties.set(key, evaluate(node.value, env))
+            return env.assignVar(varname, obj)
+        }
+        else return MK_NULL()
     } else throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
 }
 
 export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
-    if (node.assignee.kind != "Identifier") throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
+    if (node.assignee.kind == "MemberExpression")
+    {
+        const old_value = evaluate(node.assignee, env)
+        if (old_value.type != "null") return old_value
 
-    const varname = (node.assignee as Identifier).symbol;
-    const currentValue = env.lookupVar(varname);
-
-    const value = evaluate(node.value, env);
-
-    /*if (currentValue.type != value.type)
-        throw "Invalid compound assignment between type '" + currentValue.type + "' and '" + value.type + "'"*/
-
-    const op = node.operator.substring(0, node.operator.length - 1);
-
-    let newValue: RuntimeValue = MK_NULL();
-    if (currentValue.type == "number" && value.type == "number") newValue = evaluate_numeric_binary_expression(currentValue as NumberValue, value as NumberValue, op);
-    else if (currentValue.type == "string" && value.type == "string") newValue = evaluate_string_binary_expression(currentValue as StringValue, value as StringValue, op);
-    else if (currentValue.type == "string" && value.type == "number") newValue = evaluate_mixed_string_numeric_binary_expression(currentValue as StringValue, value as NumberValue, op);
-    else if (currentValue.type == "number" && value.type == "string") newValue = evaluate_mixed_string_numeric_binary_expression(value as StringValue, currentValue as NumberValue, op);
-    else return MK_NULL();
-
-    return env.assignVar(varname, newValue);
+        const assign_node = {
+            kind: "AssignmentExpression",
+            assignee: node.assignee,
+            value: node.value
+        } as AssignmentExpression
+        return evaluate_assignment_expression(assign_node, env)
+    } else {
+        if (node.assignee.kind != "Identifier") throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
+    
+        const varname = (node.assignee as Identifier).symbol;
+        const current_value = env.lookupVar(varname);
+    
+        const value = evaluate(node.value, env);
+    
+        /*if (currentValue.type != value.type)
+            throw "Invalid compound assignment between type '" + currentValue.type + "' and '" + value.type + "'"*/
+    
+        const op = node.operator.substring(0, node.operator.length - 1);
+    
+        if(op == "??" ) if(current_value.type == "null") return env.assignVar(varname, value)
+    
+        let newValue: RuntimeValue = MK_NULL();
+        if (current_value.type == "number" && value.type == "number") newValue = evaluate_numeric_binary_expression(current_value as NumberValue, value as NumberValue, op);
+        else if (current_value.type == "string" && value.type == "string") newValue = evaluate_string_binary_expression(current_value as StringValue, value as StringValue, op);
+        else if (current_value.type == "string" && value.type == "number") newValue = evaluate_mixed_string_numeric_binary_expression(current_value as StringValue, value as NumberValue, op);
+        else if (current_value.type == "number" && value.type == "string") newValue = evaluate_mixed_string_numeric_binary_expression(value as StringValue, current_value as NumberValue, op);
+        else return MK_NULL();
+    
+        return env.assignVar(varname, newValue);
+    }
+    
 }
 
 export function evaluate_object_expression(obj: ObjectLiteral, env: Environment): RuntimeValue {
@@ -261,7 +287,7 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
         else propKey = (member.property as StringLiteral).value;
 
         if (!propKey) throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
-        if (!objProps.get(propKey)) throw throwError(new InterpreterError("Invalid object key access"));
+        if (!objProps.get(propKey)) return MK_NULL() //throw throwError(new InterpreterError("Invalid object key access"));
 
         return objProps.get(propKey)!;
     } else if (variable.type == "list") {
@@ -314,4 +340,11 @@ export function evaluate_list_expression(list: ListLiteral, env: Environment): R
     }
 
     return ls;
+}
+
+export function evaluate_ternary_expression(node: TernaryExpression, env: Environment): RuntimeValue {
+    const condition = evaluate(node.condition, env);
+
+    if (condition.value) return evaluate(node.left, env);
+    else return evaluate(node.right, env)
 }

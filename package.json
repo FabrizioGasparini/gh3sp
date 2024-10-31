@@ -4,17 +4,28 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "gh3sp": "./dist/gh3sp.js"
+    "gh3sp": "./gh3sp-ide/dist/gh3sp.js"
   },
   "scripts": {
-    "build": "node prebuild.js && tsc && pkg . && node postbuild.js"
+    "build": "node prebuild.js && tsc && pkg . && node postbuild.js",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
-  "type": "module",
   "keywords": [],
   "author": "gaspa",
   "license": "ISC",
   "devDependencies": {
+    "@electron-forge/cli": "^7.5.0",
+    "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-rpm": "^7.5.0",
+    "@electron-forge/maker-squirrel": "^7.5.0",
+    "@electron-forge/maker-zip": "^7.5.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
+    "@electron-forge/plugin-fuses": "^7.5.0",
+    "@electron/fuses": "^1.8.0",
     "@types/node": "^16.18.115",
+    "electron": "33.0.2",
     "typescript": "^4.9.5"
   },
   "pkg": {
@@ -23,6 +34,7 @@
     ]
   },
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
     "gh3-lib": "^1.0.1",
     "import-sync": "^2.2.2",
     "pkg": "^5.8.1",

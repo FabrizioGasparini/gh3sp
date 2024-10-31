@@ -105,8 +105,10 @@ v2.1.0
     -> Fixed multiple new lines error: now inserting multiple empty lines doesn't throw an error 
     -> Fixed function body declaration: now function body handles new lines correctly
 
-v2.1.1
+v2.2.0
   # Features
+    -> Gh3sp IDE !!!
+    
     -> String Library:
       -> join(string_1, string_2, ..., string_n)
       -> upper(value: string)
@@ -116,10 +118,15 @@ v2.1.1
       -> stringify(value: object): string
     -> GMath Library:
       -> convert(value: string, starting_base: number, arrive_base: number)
+    
+    -> Ternary Expression: cond ? val_true : val_false
+    -> Nullish Coalescent Expression: value ?? value_if_null
+    -> Nullish Coalescent Compound Assignment: value ??= assign_value_if_null
   # Changes
     -> Single line expressions (if, for, foreach, while, function) now require an Arrow Function before the expression: if(a == b) => print("a equals b")
     -> Variable names now support "_" symbol
     -> Object keys now can be of 'string' type
+    -> Object keys which are not defined, now return 'null' instead of throwing an error
   # Fixes:
     -> Fixed comparison operations between lists: Now comparing lists (==, !=) works as expected
 

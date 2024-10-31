@@ -44,6 +44,7 @@ export enum TokenType {
 
     Colon,
     Semicolon,
+    QuestionMark,
 
     OpenParen, // (
     CloseParen, // )
@@ -80,6 +81,7 @@ const singleCharTokens: Record<string, TokenType> = {
     ",": TokenType.Comma,
     ":": TokenType.Colon,
     ";": TokenType.Semicolon,
+    "?": TokenType.QuestionMark,
     "(": TokenType.OpenParen,
     ")": TokenType.CloseParen,
     "[": TokenType.OpenBracket,
@@ -105,6 +107,7 @@ const doubleCharTokens: Record<string, TokenType> = {
     ">=": TokenType.GreaterThenOrEqual,
 
     "//": TokenType.BinaryOperator,
+    "??": TokenType.BinaryOperator,
 
     "++": TokenType.CompoundOperator,
     "--": TokenType.CompoundOperator,
@@ -124,6 +127,7 @@ const doubleCharTokens: Record<string, TokenType> = {
 const tripleCharTokens: Record<string, TokenType> = {
     "...": TokenType.SpreadOperator,
     "//=": TokenType.CompoundOperator,
+    "??=": TokenType.CompoundOperator,
 };
 
 // Token Type
