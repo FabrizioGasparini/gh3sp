@@ -201,7 +201,7 @@ function parseNumber(src: string[]): string {
 
 function parseIdentifierOrKeyword(src: string[]): Token {
     let ident = "";
-    while (src.length > 0 && isAlpha(src[0])) ident += src.shift();
+    while (src.length > 0 && (isAlpha(src[0]) || isNum(src[0]))) ident += src.shift();
 
     const reserved = KEYWORDS[ident];
     if (typeof reserved === "number") return token(ident, reserved);

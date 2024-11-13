@@ -1,5 +1,4 @@
 import type Environment from "../runtime/environments.ts";
-import { evaluate } from "../runtime/interpreter.ts";
 import { compileLibrary } from "../runtime/libraries.ts";
 import { handleError, ParserError } from "../utils/errors_handler.ts";
 import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression } from "./ast.ts";
@@ -57,7 +56,7 @@ export default class Parser {
             while (this.isEndOfLine()) this.skipNewLine();
         }
 
-        return evaluate(this.parse_program(), this.env)
+        return this.parse_program()
     }
 
     private parse_program(): Program {
@@ -759,19 +758,11 @@ export default class Parser {
         while (this.at().type == TokenType.Dot || this.at().type == TokenType.OpenBracket) {
             const operator = this.eat();
 
-            let property: Expression;
-            let computed: boolean;
+            const computed = operator.type == TokenType.OpenBracket;
+            const property = this.parse_primary_expression();
 
-            if (operator.type == TokenType.Dot) {
-                computed = false;
-                property = this.parse_primary_expression();
-
-                if (property.kind != "Identifier") this.throwError(new SyntaxError("Cannot use dot operator without an identifier on the right"));
-            } else {
-                computed = true;
-                property = this.parse_expression();
-                this.expect(TokenType.CloseBracket, "Missing closing bracket in computed value");
-            }
+            if (computed) this.expect(TokenType.CloseBracket, "Missing closing bracket in computed value");
+            else if (property.kind != "Identifier") this.throwError(new SyntaxError("Cannot use dot operator without an identifier on the right"))
 
             object = {
                 kind: "MemberExpression",

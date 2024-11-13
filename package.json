@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "gh3sp": "./gh3sp-ide/dist/gh3sp.js"
+    "gh3sp": "./dist/gh3sp.js"
   },
   "scripts": {
     "build": "node prebuild.js && tsc && pkg . && node postbuild.js",

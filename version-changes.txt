@@ -108,7 +108,7 @@ v2.1.0
 v2.2.0
   # Features
     -> Gh3sp IDE !!!
-    
+
     -> String Library:
       -> join(string_1, string_2, ..., string_n)
       -> upper(value: string)
@@ -129,6 +129,14 @@ v2.2.0
     -> Object keys which are not defined, now return 'null' instead of throwing an error
   # Fixes:
     -> Fixed comparison operations between lists: Now comparing lists (==, !=) works as expected
+
+v2.2.1
+  # Changes
+    -> Parser now doesn't automatically start evaluating the program through the interpreter, but instead it returns it to the main file, which run the interpreter's evaluation itself. This way the gh3sp-extension can parse the code and not run it immediately
+  # Fixes
+    -> Variable names can now contains digit characters [0-9] but not at the start of the name (e.g. var_1 --> yes, 1_var --> no)
+    -> Obj access with obj[value] or obj.value, with value as a non-existing key inside the object, now sets a new key inside the object: let obj = {"a": 2}    obj["b"] ??= 5 --> {"a": 2, "undefined": 5}
+    -> Obj & List access/assignment/compound assignment now work properly
 
 
 vx.x.x

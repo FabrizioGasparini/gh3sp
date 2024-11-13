@@ -1,4 +1,4 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type TernaryExpression } from "../../frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "../../frontend/ast.ts";
 import { InterpreterError, MathError } from "../../utils/errors_handler.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
@@ -58,6 +58,29 @@ function evaluate_mixed_string_numeric_binary_expression(string: StringValue, nu
     else throw throwError(new InterpreterError("Invalid operation between string and number: '" + operator + "'"));
 
     return { value: result, type: "string" } as StringValue;
+}
+
+function evaluate_mixed_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): RuntimeValue {
+    switch (left.type) {
+        case "number": {
+            if(right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, operator);
+            else if (right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, operator);
+            break;
+        }
+        
+        case "string": {
+            if (right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, operator);
+            else if (right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, operator);
+            break;
+        }
+        
+        case "list": {
+            if (right.type == "list") return evaluate_list_binary_expression(left as ListValue, right as ListValue, operator);
+            break;
+        }
+    }
+
+    return MK_NULL()
 }
 
 function evaluate_list_binary_expression(left: ListValue, right: ListValue, operator: string): ListValue {
@@ -137,13 +160,8 @@ export function evaluate_binary_expression(node: BinaryExpression, env: Environm
 
     if (op == "??") return left.type == "null" ? right : left;
 
-    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") {
-        if (left.type == "number" && right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, op);
-        else if (left.type == "string" && right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, op);
-        else if (left.type == "string" && right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, op);
-        else if (left.type == "number" && right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, op);
-        else if (left.type == "list" && right.type == "list") return evaluate_list_binary_expression(right as ListValue, left as ListValue, op);
-    } else if (op == "==" || op == "!=" || op == "<=" || op == ">=" || op == "<" || op == ">") return evaluate_comparison_binary_expression(left, right, op);
+    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") return evaluate_mixed_binary_expression(left, right, op);
+    else if (op == "==" || op == "!=" || op == "<=" || op == ">=" || op == "<" || op == ">") return evaluate_comparison_binary_expression(left, right, op);
 
     return MK_NULL();
 }
@@ -172,64 +190,202 @@ export function evaluate_identifier(ident: Identifier, env: Environment): Runtim
     return val;
 }
 
-export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
-    if (node.assignee.kind == "Identifier") {
-        const varname = (node.assignee as Identifier).symbol;
-        return env.assignVar(varname, evaluate(node.value, env));
-    } else if (node.assignee.kind == "MemberExpression") {
-        const varname = ((node.assignee as MemberExpression).object as Identifier).symbol;
-        const variable = env.lookupVar(varname)
-        if(variable.type == "list") {
-            const list = env.lookupVar(varname) as ListValue;
-            const idx = evaluate((node.assignee as MemberExpression).property, env) as NumberValue;
-            list.value[idx.value] = evaluate(node.value, env);
-            return env.assignVar(varname, list);
-        } else if (variable.type == "object") {
-            const obj = env.lookupVar(varname) as ObjectValue;
-            const key = ((node.assignee as MemberExpression).property as Identifier).symbol
-            obj.properties.set(key, evaluate(node.value, env))
-            return env.assignVar(varname, obj)
+function get_member_expression_result(node: MemberExpression, env: Environment): RuntimeValue {
+    let object = node.object
+    if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
+
+    const object_name = (object as Identifier).symbol
+    return (env.lookupVar(object_name) as ObjectValue)
+}
+
+function get_member_expression_variable(node: MemberExpression): Identifier {
+    let object = node.object
+    if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
+
+    const object_name = (object as Identifier)
+    return object_name
+}
+
+function get_object_props(node: MemberExpression): string[] {
+    let object = node.object
+    
+    const props: string[] = [node.computed ? (node.property as StringLiteral).value : (node.property as Identifier).symbol]
+    
+    if (node.computed) {
+        if (object.kind != "Identifier")
+        {
+            while (object.kind != "Identifier") {
+                props.unshift(((object as MemberExpression).property as StringLiteral).value)
+                object = (object as MemberExpression).object
+            }
         }
-        else return MK_NULL()
-    } else throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
+    }
+    else {        
+        if (object.kind != "Identifier")
+        {
+            while (object.kind != "Identifier") {
+                props.unshift(((object as MemberExpression).property as Identifier).symbol)
+                object = (object as MemberExpression).object
+            }
+        }
+    }
+
+    return props
+}
+
+export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
+    switch (node.assignee.kind) {
+        // a = value
+        case "Identifier":            
+            return env.assignVar((node.assignee as Identifier).symbol, evaluate(node.value, env));
+        
+        // obj[key] = value, list[idx] = value
+        case "MemberExpression": {
+            const member = node.assignee as MemberExpression 
+
+            const expression = get_member_expression_result(member, env)
+            const variable = get_member_expression_variable(member).symbol
+
+            switch (expression.type) {
+                case "list": {
+                    const idx = (member.property as NumericLiteral).value; 
+                    if (typeof idx != "number") throw throwError(new InterpreterError("Invalid list index: " + idx))
+                    
+                    expression.value[idx] = evaluate(node.value, env);
+                    
+                    return env.assignVar(variable, expression)
+                }
+                
+                case "object": {
+                    const object = expression
+                    const props = get_object_props(member)
+                    const key = props.pop()!
+
+                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"))
+                        
+                    let result = object;
+                    for (const prop of props) {
+                        if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
+                    }
+                        
+                    if (!(result as ObjectValue).properties.has(key)) {
+                        // Here the "invalid" keys can be handled, like creating a new key if the given one is not found inside the object
+                        //throw throwError(new InterpreterError("Invalid object key (not found)"))
+                    }
+                    
+                    (result as ObjectValue).properties.set(key, evaluate(node.value, env))
+                    return env.assignVar(variable, object)
+                }
+                
+                default:
+                    throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
+            }
+        }
+        
+        default:
+            throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
+    }
+   
+    
+    /*
+    const variable = get_expression_result((node.assignee as MemberExpression), env)
+    if(variable.type == "list") {
+        const list = variable as ListValue;
+        const idx = evaluate((node.assignee as MemberExpression).property, env) as NumberValue;
+        list.value[idx.value] = evaluate(node.value, env);
+        return env.assignVar(varname, list);
+    } else if (variable.type == "object") {
+        const obj = env.lookupVar(varname) as ObjectValue;
+        const key = ((node.assignee as MemberExpression).property as Identifier).symbol
+        obj.properties.set(key, evaluate(node.value, env))
+        return env.assignVar(varname, obj)
+    } else return MK_NULL()
+    */
 }
 
 export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
-    if (node.assignee.kind == "MemberExpression")
-    {
-        const old_value = evaluate(node.assignee, env)
-        if (old_value.type != "null") return old_value
+    const op = node.operator.substring(0, node.operator.length - 1);
+    
+    switch (node.assignee.kind) {
+        case "MemberExpression": {
+            const member = node.assignee as MemberExpression
+            const expression = get_member_expression_result(member, env)
+            const variable = get_member_expression_variable(member).symbol
+            const props = get_object_props(member)
+            const key = props.pop()!
 
-        const assign_node = {
-            kind: "AssignmentExpression",
-            assignee: node.assignee,
-            value: node.value
-        } as AssignmentExpression
-        return evaluate_assignment_expression(assign_node, env)
-    } else {
-        if (node.assignee.kind != "Identifier") throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
+            if (!key) throw throwError(new InterpreterError("Invalid object key"))
+                
+            let result = expression;
+            for (const prop of props) {
+                if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!
+            }
+                
+            const new_value = evaluate(node.value, env);
+
+            switch (result.type)
+            {
+                case "object": {
+                    if (!(result as ObjectValue).properties.has(key)) {
+                        if (op == "??") {
+                            (result as ObjectValue).properties.set(key, new_value)
+                            
+                            return env.assignVar(variable, expression)
+                        }
     
-        const varname = (node.assignee as Identifier).symbol;
-        const current_value = env.lookupVar(varname);
-    
-        const value = evaluate(node.value, env);
-    
-        /*if (currentValue.type != value.type)
-            throw "Invalid compound assignment between type '" + currentValue.type + "' and '" + value.type + "'"*/
-    
-        const op = node.operator.substring(0, node.operator.length - 1);
-    
-        if(op == "??" ) if(current_value.type == "null") return env.assignVar(varname, value)
-    
-        let newValue: RuntimeValue = MK_NULL();
-        if (current_value.type == "number" && value.type == "number") newValue = evaluate_numeric_binary_expression(current_value as NumberValue, value as NumberValue, op);
-        else if (current_value.type == "string" && value.type == "string") newValue = evaluate_string_binary_expression(current_value as StringValue, value as StringValue, op);
-        else if (current_value.type == "string" && value.type == "number") newValue = evaluate_mixed_string_numeric_binary_expression(current_value as StringValue, value as NumberValue, op);
-        else if (current_value.type == "number" && value.type == "string") newValue = evaluate_mixed_string_numeric_binary_expression(value as StringValue, current_value as NumberValue, op);
-        else return MK_NULL();
-    
-        return env.assignVar(varname, newValue);
+                        throw throwError(new InterpreterError("Invalid object key (not found)"))
+                    }
+                    
+                    const current_value = (result as ObjectValue).properties.get(key)!
+                    if (op == "??") {
+                        if (current_value.type == "null") {
+                            (result as ObjectValue).properties.set(key, new_value)
+                            
+                            return env.assignVar(variable, expression)
+                        }
+                        
+                        return expression
+                    }
+                    
+                    const value = evaluate_mixed_binary_expression(current_value, new_value, op);
+                    (result as ObjectValue).properties.set(key, value)
+                    return env.assignVar(variable, expression)
+                }
+                    
+                case "list": {
+                    const idx = (member.property as NumericLiteral).value; 
+                    if (typeof idx != "number") throw throwError(new InterpreterError("Invalid list index: " + idx))
+                    
+                    const current_value = expression.value[idx];
+                    const new_value = evaluate(node.value, env)
+                    expression.value[idx] = evaluate_mixed_binary_expression(current_value, new_value, op);
+                    
+                    return env.assignVar(variable, expression)
+                }
+                    
+                default:
+                    throw throwError(new InterpreterError("Invalid compound assignment"))
+            }
+
+            break
+        }
+            
+        case "Identifier": {
+            const varname = (node.assignee as Identifier).symbol;
+            const current_value = env.lookupVar(varname);
+        
+            const value = evaluate(node.value, env);
+                
+            if(op == "??") if(current_value.type == "null") return env.assignVar(varname, value)
+        
+            const new_value = evaluate_mixed_binary_expression(current_value, value, op);
+        
+            return env.assignVar(varname, new_value);
+        }
+        default:
+            throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
     }
+    
     
 }
 
@@ -245,64 +401,50 @@ export function evaluate_object_expression(obj: ObjectLiteral, env: Environment)
 }
 
 export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
-    let object = member.object;
+    const object: Expression = get_member_expression_variable(member);
+    const props = get_object_props(member)
 
-    const props = [];
-    // This part is just for objects \\
-    // ============================= \\
-    if (object.kind == "MemberExpression") {
-        while (object.kind == "MemberExpression") {
-            const obj = object as MemberExpression;
-
-            props.push(obj.property);
-            object = obj.object;
-        }
-        props.reverse();
-    }
-    // ============================= \\
-
-    
     const varname = (object as Identifier).symbol;
     const variable = env.lookupVar(varname);
 
-    
-    if(member.computed && (variable as ObjectValue).native) throw throwError(new InterpreterError("Invalid native object key access. Expected valid key (e.g. obj.key)"))
-    if (variable.type == "object") {
-        let objProps = (variable as ObjectValue).properties;
-        for (const prop of props) {
-            if (member.computed) {
-                
-                if (objProps.get((prop as StringLiteral).value)) objProps = (objProps.get((prop as StringLiteral).value) as ObjectValue).properties;
-                else if (objProps.get(env.lookupVar((prop as Identifier).symbol).value)) objProps = (objProps.get(env.lookupVar((prop as Identifier).symbol).value) as ObjectValue).properties;
-            } else {
-                if (objProps.get((prop as Identifier).symbol)) objProps = (objProps.get((prop as Identifier).symbol) as ObjectValue).properties;
-            }
-        }
+    switch (variable.type) {
+        case "object": {
+            const object = variable as ObjectValue;
+            
+            if (member.computed && object.native) throw throwError(new InterpreterError("Invalid native object key access. Expected valid key (e.g. obj.key)"))    
         
-        let propKey: string;
+            const key = props.pop()!
+            
+            if (!key) throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
+            
+            let result = variable;
+            for (const prop of props) {
+                if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
+            }
+                
+            if (!(result as ObjectValue).properties.has(key)) {
+                return MK_NULL()
+                //throw throwError(new InterpreterError("Invalid object key (not found)"))
+            }
+            
+            return (result as ObjectValue).properties.get(key)!
+        }
 
-        if (member.computed && member.property.kind == "Identifier") member.property = { kind: "StringLiteral", value: env.lookupVar((member.property as Identifier).symbol).value } as StringLiteral;
+        case "list": {
+            if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
+            
+            const index = (evaluate(member.property, env) as NumberValue).value;
+            if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number])"));
+            
+            const list = variable as ListValue;
+            if (index < 0 || index > list.value.length - 1) throw throwError(new InterpreterError("Invalid list index. Index must be between 0 and " + (list.value.length - 1)));
+            
+            return list.value[index];
+        }
 
-        if (!member.computed) propKey = (member.property as Identifier).symbol;
-        else propKey = (member.property as StringLiteral).value;
-
-        if (!propKey) throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
-        if (!objProps.get(propKey)) return MK_NULL() //throw throwError(new InterpreterError("Invalid object key access"));
-
-        return objProps.get(propKey)!;
-    } else if (variable.type == "list") {
-        if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
-
-        const index = (evaluate(member.property, env) as NumberValue).value;
-        if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number])"));
-
-        const list = variable as ListValue;
-        if (index < 0 || index > list.value.length - 1) throw throwError(new InterpreterError("Invalid list index. Index must be between 0 and " + (list.value.length - 1)));
-
-        return list.value[index];
+        default:
+            return MK_NULL()
     }
-
-    return MK_NULL();
 }
 
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {
