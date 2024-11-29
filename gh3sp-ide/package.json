@@ -4,7 +4,7 @@
   "description": "An IDE for Gh3sp Programming Language",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "electron .",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },

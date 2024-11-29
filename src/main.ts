@@ -7,6 +7,7 @@ run(await Deno.readTextFile("./main.gh3"));
 export function run(input: string) {
     const env = createGlobalEnvironment();
     const parser = new Parser(env);
+
     parser.produceAST(input).then((AST) => {
         return evaluate(AST, env);
     });

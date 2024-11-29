@@ -6,36 +6,45 @@ import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Ident
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
 export default class Parser {
+    // Declares a list of Tokens
     private tokens: Token[] = [];
+    // Specifies whether the parser is declaring a variable or not
     private isDeclaring: boolean = false;
+    // Defines the current parsed line
     private currentLine: number = 1;
+    // Defines the current parsed column
     private currentColumn: number = 1;
-
+    
+    // Declares the working environment
     private env: Environment;
-
+    
     constructor(env: Environment) {
         this.env = env;
     }
-
+    
+    // Returns true if the current token is not the last one
     private not_eof(): boolean {
         return this.tokens[0].type != TokenType.EOF;
     }
-
+    
+    // Returns the current token, skipping empty lines
     private at() {
-        while(this.tokens[0].type == TokenType.NewLine) this.skipNewLine()
-        return this.tokens[0] as Token;
+        while(this.tokens[0].type == TokenType.NL) this.skipNewLine()
+            return this.tokens[0] as Token;
     }
-
+    
+    // Skips and returns the current token
     private eat() {
         const prev = this.tokens.shift() as Token;
         this.currentColumn += prev.value.length;
         return prev;
     }
-
+    
+    // Throws an error if the current Token does not have the given TokenType, otherwise the current token
     private expect(type: TokenType, err: string) {
         const prev = this.tokens.shift() as Token;
 
-        if (prev.type == TokenType.NewLine) this.skipNewLine();
+        if (prev.type == TokenType.NL) this.skipNewLine();
 
         if (!prev || prev.type != type) this.throwError(new ParserError(err, type));
 
@@ -44,21 +53,27 @@ export default class Parser {
         return prev;
     }
 
+    // Returns true if the current token is a new line
     private isEndOfLine(): boolean {
-        return this.at().type == TokenType.NewLine
+        return this.tokens[0].type == TokenType.NL
     }
 
+    // Returns the parsed program linked to all the imported libraries
     public async produceAST(sourceCode: string) {
+        // Gets the token from the source code using the lexer 
         this.tokens = tokenize(sourceCode);
-
+        
+        // Imports all the libraries 
         while (this.at().type == TokenType.Import) {
             await this.parse_import_statement()
             while (this.isEndOfLine()) this.skipNewLine();
         }
-
+        
+        // Returns the parsed program 
         return this.parse_program()
     }
 
+    // Returns the parsed program
     private parse_program(): Program {
         const program: Program = {
             kind: "Program",
@@ -79,67 +94,95 @@ export default class Parser {
         return program;
     }
 
+    // Throws a given error specifying the current line and the current column
     private throwError(error: Error) {
         handleError(error, this.currentLine, this.currentColumn);
     }
 
+    // Skips new line
     private skipNewLine() {
         this.eat();
         this.currentLine++;
         this.currentColumn = 1;
     }
 
+    // Parses a statement and returns it
     private parse_statement(): Statement {
         if (this.isEndOfLine()) {
             this.skipNewLine();
             return this.parse_statement();
         }
 
+        let stmt: Statement;
         switch (this.at().type) {
             case TokenType.Let:
-                return this.parse_variable_declaration();
+                stmt = this.parse_variable_declaration();
+                break;
             case TokenType.Const:
-                return this.parse_variable_declaration();
-
+                stmt = this.parse_variable_declaration();
+                break;
+                
             case TokenType.Fn:
-                return this.parse_function_declaration();
+                stmt = this.parse_function_declaration();
+                break;
 
             case TokenType.If:
-                return this.parse_if_statement();
+                stmt = this.parse_if_statement();
+                break;
 
             case TokenType.For:
-                return this.parse_for_statement();
+                stmt = this.parse_for_statement();
+                break;
             case TokenType.While:
-                return this.parse_while_statement();
+                stmt = this.parse_while_statement();
+                break;
             case TokenType.ForEach:
-                return this.parse_foreach_statement();
+                stmt = this.parse_foreach_statement();
+                break;
 
             case TokenType.Import:
                 throw this.throwError(new ParserError("Libraries can only be imported at the start of the program."))
-
+        
             default:
                 return this.parse_expression();
         }
+
+
+        return stmt
     }
 
+    // Returns a function declaration statement
     private parse_function_declaration(): Statement {
-        this.eat(); // eat fn keyword
+        // Eat the 'fn' keyword
+        this.eat();
+
+        // Defines a name for the function if it finds an identifier
         let name = undefined;
         if (this.at().type == TokenType.Identifier)
+        {
+            // Throws an error if it finds an identifier while declaring a function as a variable
             if (this.isDeclaring) this.throwError(new SyntaxError("Cannot declare a named function during variable declaration"));
-            else name = this.eat().value;
-
+            name = this.eat().value;
+        }
+            
+        // Gets a list of arguments for the function
         const args = this.parse_args();
+        // Defines a list of parameters names
         const parameters: string[] = [];
         for (const arg of args) {
+            // Throws an error if the current argument is not of type 'Identifier'
             if (arg.kind != "Identifier") this.throwError(new SyntaxError("Expected string parameters inside of function declaration. " + arg));
 
+            // Adds the found parameters name to the parameters list
             parameters.push((arg as Identifier).symbol);
         }
 
+        // Declares the list of statements found in body
         const body: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
-            this.eat(); // Go past {
+            // Eat the '{' token
+            this.eat();
+
             while (this.at().type != TokenType.CloseBrace) {
                 while (this.isEndOfLine()) this.skipNewLine();
                 
@@ -165,14 +208,14 @@ export default class Parser {
         return fn;
     }
 
+    // Returns a variable declaration statement
     private parse_variable_declaration(): Statement {
         const isConstant = this.eat().type == TokenType.Const;
         const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
 
         const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
 
-        if (this.at().type == TokenType.Semicolon || this.at().type == TokenType.EOF) {
-            this.eat();
+        if (this.isEndOfLine() || !this.not_eof()) {
             if (isConstant) this.throwError(new SyntaxError(`Must assign value to constant expression '${assignee}'. No value provided.`));
 
             return {
@@ -181,12 +224,13 @@ export default class Parser {
                 constant: false,
                 line: this.currentLine,
                 column: this.currentColumn,
+                negative: false
             } as VariableDeclaration;
         }
-
         this.expect(TokenType.Equal, "Expected equals token following identifier in variable declaration");
 
         this.isDeclaring = true;
+        const negative = this.at().value == "-"
 
         const declaration = {
             kind: "VariableDeclaration",
@@ -195,6 +239,7 @@ export default class Parser {
             value: this.parse_statement(),
             line: this.currentLine,
             column: this.currentColumn,
+            negative
         } as VariableDeclaration;
 
         this.isDeclaring = false;
@@ -202,6 +247,7 @@ export default class Parser {
         return declaration;
     }
 
+    // Returns an if statement
     private parse_if_statement(): Statement {
         this.eat(); // Go past 'if' token
 
@@ -253,6 +299,7 @@ export default class Parser {
         } as IfStatement;
     }
     
+    // Returns a for statement
     private parse_for_statement(): Statement {
         this.eat(); // Go past for keyword
         
@@ -308,6 +355,7 @@ export default class Parser {
         } as ForStatement;
     }
 
+    // Returns a foreach statement
     private parse_foreach_statement(): Statement {
         this.eat(); // Go past foreach keyword
 
@@ -355,6 +403,7 @@ export default class Parser {
         } as ForEachStatement;
     }
 
+    // Returns a while statement
     private parse_while_statement(): Statement {
         this.eat(); // Go past for keyword
         this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
@@ -389,6 +438,7 @@ export default class Parser {
         } as WhileStatement;
     }
 
+    // Returns an import statement
     private async parse_import_statement() {
         this.eat(); // Go past import keyword
         const path = this.expect(TokenType.String, "Expected 'string' following import keyword").value;
@@ -414,11 +464,12 @@ export default class Parser {
     // Member Expression
     // Primary Expression
 
-    
+    // Returns a parsed expression
     private parse_expression(): Expression {
         return this.parse_compound_assignment_expression();
     }
 
+    // Returns a compound assignment expression
     private parse_compound_assignment_expression(): Expression {
         const left = this.parse_assignment_expression();
 
@@ -442,6 +493,7 @@ export default class Parser {
         return left;
     }
     
+    // Returns an assignment expression
     private parse_assignment_expression(): Expression {
         const left = this.parse_logical_or_expression();
         
@@ -462,6 +514,7 @@ export default class Parser {
         return left;
     }
     
+    // Returns a logical OR expression
     private parse_logical_or_expression(): Expression {
         let left = this.parse_logical_and_expression();
         
@@ -482,6 +535,7 @@ export default class Parser {
         return left
     }
     
+    // Returns a logical AND expression
     private parse_logical_and_expression(): Expression {
         let left = this.parse_logical_not_expression();
         
@@ -502,6 +556,7 @@ export default class Parser {
         return left
     }
     
+    // Returns a logical NOT expression
     private parse_logical_not_expression(): Expression {
         if (this.at().type == TokenType.LogicOperator && this.at().value == "!") {
             const operator = this.eat().value;
@@ -520,6 +575,7 @@ export default class Parser {
         return this.parse_nullish_coalescing_expression()
     }
 
+    // Returns a nullish coalescing expression
     private parse_nullish_coalescing_expression(): Expression {        
         const left = this.parse_ternary_expression();
 
@@ -541,6 +597,7 @@ export default class Parser {
         return left;
     }
         
+    // Returns a ternary expression
     private parse_ternary_expression(): Expression {        
         const condition = this.parse_equality_expression();
 
@@ -566,6 +623,7 @@ export default class Parser {
         return condition;
     }
 
+    // Returns an equality expression
     private parse_equality_expression(): Expression {
         let left = this.parse_object_expression();
 
@@ -586,6 +644,7 @@ export default class Parser {
         return left;
     }
 
+    // Returns an object expression
     private parse_object_expression(): Expression {
         if (this.at().type != TokenType.OpenBrace) return this.parse_list_expression();
 
@@ -626,6 +685,7 @@ export default class Parser {
         } as ObjectLiteral;
     }
 
+    // Returns a list expression
     private parse_list_expression(): Expression {
         if (this.at().type != TokenType.OpenBracket) return this.parse_additive_expression();
 
@@ -657,6 +717,7 @@ export default class Parser {
         } as ListLiteral;
     }
 
+    // Returns an additive expression
     private parse_additive_expression(): Expression {
         let left = this.parse_multiplicative_expression();
 
@@ -676,6 +737,7 @@ export default class Parser {
         return left;
     }
 
+    // Returns a multiplicative expression
     private parse_multiplicative_expression(): Expression {
         let left = this.parse_exponential_expression();
 
@@ -695,16 +757,22 @@ export default class Parser {
         return left;
     }
 
+    // Returns an exponential expression
     private parse_exponential_expression(): Expression {
         let left = this.parse_call_member_expression();
 
         while (this.at().value == "^") {
             const operator = this.eat().value;
+
+            const negative = this.at().value == "-" 
+            if(negative) this.eat()
+
             const right = this.parse_call_member_expression();
             left = {
                 kind: "BinaryExpression",
                 left,
                 right,
+                negative,
                 operator,
                 line: this.currentLine,
                 column: this.currentColumn,
@@ -714,6 +782,7 @@ export default class Parser {
         return left;
     }
 
+    // Returns a call member expression
     private parse_call_member_expression(): Expression {
         const member = this.parse_member_expression();
 
@@ -722,6 +791,7 @@ export default class Parser {
         return member;
     }
 
+    // Returns a call expression
     private parse_call_expression(caller: Expression): Expression {
         let call_expression: Expression = {
             kind: "CallExpression",
@@ -732,10 +802,10 @@ export default class Parser {
         } as CallExpression;
 
         if (this.at().type == TokenType.OpenParen) call_expression = this.parse_call_expression(call_expression);
-
         return call_expression;
     }
 
+    // Returns a list of arguments for the call expression
     private parse_args(): Expression[] {
         this.expect(TokenType.OpenParen, "Expected open parenthesis");
         const args = this.at().type == TokenType.CloseParen ? [] : this.parse_args_list();
@@ -744,6 +814,7 @@ export default class Parser {
         return args;
     }
 
+    // Returns a list of arguments for the call expression
     private parse_args_list(): Expression[] {
         const args = [this.parse_statement()];
 
@@ -752,6 +823,7 @@ export default class Parser {
         return args;
     }
 
+    // Returns a member expression
     private parse_member_expression(): Expression {
         let object = this.parse_primary_expression();
 
@@ -777,6 +849,7 @@ export default class Parser {
         return object;
     }
 
+    // Returns a primary expression
     private parse_primary_expression(): Expression {
         const token = this.at().type;
 

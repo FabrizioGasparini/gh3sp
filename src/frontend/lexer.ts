@@ -9,26 +9,19 @@ export enum TokenType {
     // Keywords
     Let,
     Const,
-
     Fn,
-
     If,
     Else,
-
     For,
     While,
-
     ForEach,
     In,
-
     Import,
 
-    // Grouping & Operators
+    // Operators
     BinaryOperator,
     CompoundOperator,
     LogicOperator,
-    Equal,
-    SpreadOperator,
     ArrowOperator,
 
     // Comparison Operators
@@ -39,25 +32,28 @@ export enum TokenType {
     LessThanOrEqual,
     GreaterThenOrEqual,
 
+    // Symbols
+    Equal,
     Dot,
     Comma,
-
     Colon,
     Semicolon,
     QuestionMark,
 
-    OpenParen, // (
-    CloseParen, // )
-    OpenBracket, // [
-    CloseBracket, // ]
-    OpenBrace, // {
-    CloseBrace, // }
+    // Grouping
+    OpenParen,
+    CloseParen, // ()
+    OpenBracket,
+    CloseBracket, // []
+    OpenBrace,
+    CloseBrace, // {}
 
-    NewLine,
+    // Non-Code Tokens
+    NL, // New Line
     EOF, // End of file
 }
 
-// Tokens Records
+// === Tokens Records === \\
 const KEYWORDS: Record<string, TokenType> = {
     let: TokenType.Let,
     const: TokenType.Const,
@@ -69,7 +65,6 @@ const KEYWORDS: Record<string, TokenType> = {
 
     for: TokenType.For,
     while: TokenType.While,
-
     foreach: TokenType.ForEach,
     in: TokenType.In,
 
@@ -125,7 +120,6 @@ const doubleCharTokens: Record<string, TokenType> = {
 };
 
 const tripleCharTokens: Record<string, TokenType> = {
-    "...": TokenType.SpreadOperator,
     "//=": TokenType.CompoundOperator,
     "??=": TokenType.CompoundOperator,
 };
@@ -140,67 +134,64 @@ function token(value = "", type: TokenType): Token {
     return { value, type };
 }
 
-// Check Functions
-function isAlpha(src: string) {
-    return src.toUpperCase() != src.toLocaleLowerCase() || src[0] == "_";
-}
+// === Check Functions === \\
+// Checks if the given character is made ONLY of alphabetic character, or the current char is a '_'
+const isAlpha = (char: string): boolean => char.toUpperCase() != char.toLocaleLowerCase() || char[0] == "_";
 
-function isSkippable(src: string) {
-    return src == " " || src == "\t" || src == "\r";
-}
+// Checks if the given character is a 'space', 'tab' and 'carriage return', which is skippable
+const isSkippable = (char: string): boolean => char == " " || char == "\t" || char == "\r";
 
-function isSignleComment(src: string[]) {
-    return src[0] == "#";
-}
+// Checks if the given character is '#', which is the single line comment symbol
+const isSignleComment = (char: string): boolean => char == "#";
 
-function isMultiComment(src: string[]) {
-    return src[0] + src[1] == "/*";
-}
+// Checks if the given characters are '/*', which is the beginning of a multi-line comment
+const isMultiComment = (src: string[]): boolean => src[0] + src[1] == "/*";
 
-function isNum(src: string) {
-    const c = src.charCodeAt(0);
-    const bounds = ["0".charCodeAt(0), "9".charCodeAt(0)];
+// Checks if the given character is a digit (between 0 - 9)
+const isNum = (char: string): boolean => char.charCodeAt(0) >= "0".charCodeAt(0) && char.charCodeAt(0) <= "9".charCodeAt(0);
 
-    return c >= bounds[0] && c <= bounds[1];
-}
+// Checks if the given characters are in a '-d' format, which is when the current character is a '-' and the next one is a digit '0 - 9'
+const isNegative = (src: string[], token: Token): boolean => src[0] == "-" && isNum(src[1]) && token.type != TokenType.Number && token.type != TokenType.Identifier;
 
-function isDecimal(src: string[]) {
-    return src[0] == "." && isNum(src[1]);
-}
+// Checks if the given 'n' characters, with 'n' being the 'length' of the token, are contained in the specified tokens 'record'
+const isMultiCharToken = (src: string[], length: number, record: Record<string, TokenType>): boolean => src.slice(0, length).join("") in record;
 
-function isNegative(src: string[]) {
-    return src[0] == "-" && isNum(src[1]);
-}
+// Checks if the given character is the end of the line
+const isEndOfLine = (char: string): boolean => char == "\n";
 
-function isMultiCharToken(src: string[], length: number, record: Record<string, TokenType>) {
-    let value: string = "";
-    for (let i = 0; i < length; i++) value += src[i];
+// Checks if the given character is the begging of a string (" or ')
+const isString = (char: string): boolean => char == '"' || char == "'";
 
-    return value in record;
-}
-
-// Parsing Functions
+// === Parsing Functions === \\
+// Parses a 'quoted string' ('', "") from the given characters
 function parseString(src: string[]): string {
-    const quoteType = src.shift(); // Removes quote (" or ')
+    const quoteType = src.shift(); // Removes opening quote: " or '
     let str = "";
 
     while (src.length > 0 && src[0] != quoteType) str += src.shift();
 
-    src.shift(); // Removes closing quote
+    src.shift(); // Removes closing quote: " or '
     return str;
 }
 
-function parseNumber(src: string[]): string {
+// Parses a 'number' (integer, float, negative) from the given characters
+function parseNumber(src: string[], token: Token): string {
     let num = "";
-    while (src.length > 0 && (isNum(src[0]) || isDecimal(src) || isNegative(src))) {
-        if (isDecimal(src) && num.includes(".")) throw handleError(new LexerError("Invalid number format"), currentLine, currentColumn);
+
+    while (src.length > 0 && (isNum(src[0]) || src[0] == "." || isNegative(src, token)) && (src[0] != "-" || (num.length == 0 && src[0] == "-"))) {
+        // If (the current character is a '.' AND the number already contains a '.') OR (the current character is a '-' and it isn't at the start of the number), throw an error
+        if (src[0] == "." && num.includes(".")) throw handleError(new LexerError("Invalid number format"), currentLine, currentColumn);
+
         num += src.shift();
     }
+
     return num;
 }
 
+// Parses a 'keyword' if the given characters are found inside the 'KEYWORDS' record, or a
 function parseIdentifierOrKeyword(src: string[]): Token {
     let ident = "";
+
     while (src.length > 0 && (isAlpha(src[0]) || isNum(src[0]))) ident += src.shift();
 
     const reserved = KEYWORDS[ident];
@@ -208,17 +199,7 @@ function parseIdentifierOrKeyword(src: string[]): Token {
     else return token(ident, TokenType.Identifier);
 }
 
-function skipSingleLineComment(src: string[]): void {
-    while (src.length > 0 && src[0] !== "\n") src.shift();
-    src.shift(); // Rimuovi il newline finale
-}
-
-function skipMultiLineComment(src: string[]): void {
-    while (src.length > 0 && src[0] + src[1] !== "*/") src.shift();
-    src.shift(); // Rimuovi "*"
-    src.shift(); // Rimuovi "/"
-}
-
+// Parses a 'token' of a given 'length', from the given 'record'
 function parseMultiCharToken(src: string[], length: number, record: Record<string, TokenType>): Token {
     let value: string = "";
     for (let i = 0; i < length; i++) value += src[i];
@@ -230,34 +211,72 @@ function parseMultiCharToken(src: string[], length: number, record: Record<strin
     return token(value, type);
 }
 
+// === Comments Function === \\
+// Skips the single line token
+function skipSingleLineComment(src: string[]): void {
+    while (src.length > 0 && src[0] !== "\n") src.shift(); // Removes the comment until the end of the line
+    src.shift(); // Removes the NL token
+}
+
+function skipMultiLineComment(src: string[]): void {
+    while (src.length > 0 && src[0] + src[1] !== "*/") src.shift(); // Removes the comment until it finds the end of the multi-line comment
+    src.shift();
+    src.shift(); // Removes "*/"
+}
+
+// Variables to keep count of the current position inside the code, for errors handling purposes
 let currentLine = 1;
 let currentColumn = 1;
 
+// Returns a list of tokens from the given 'source code'
 export function tokenize(sourceCode: string): Token[] {
     const tokens = new Array<Token>();
     const src = sourceCode.split("");
 
+    /* == Importance Order == *\
+       1. New Line
+       2. Skippable
+
+       3. Single-Line Comment
+       4. Multi-Line Comment
+
+       5. Triple-Char Token
+       6. Double-Char Token
+
+       7. Number
+       8. Negative Number
+
+       9. String
+
+       10. Single-Char Token
+
+       11. Identifier/Keyword
+    \* ====================== */
+
     while (src.length > 0) {
         const current = src[0];
 
-        if (current == "\n") {
-            tokens.push(token(src.shift(), TokenType.NewLine));
+        if (isEndOfLine(current)) {
+            tokens.push(token(src.shift(), TokenType.NL));
             currentLine += 1;
             currentColumn = 1;
             continue;
-        } else if (isSkippable(current)) {
+        }
+
+        if (isSkippable(current)) {
             src.shift();
             continue;
         }
+
         currentColumn += current.length;
 
-        if (isSignleComment(src)) skipSingleLineComment(src);
+        if (isSignleComment(current)) skipSingleLineComment(src);
         else if (isMultiComment(src)) skipMultiLineComment(src);
         else if (isMultiCharToken(src, 3, tripleCharTokens)) tokens.push(parseMultiCharToken(src, 3, tripleCharTokens));
         else if (isMultiCharToken(src, 2, doubleCharTokens)) tokens.push(parseMultiCharToken(src, 2, doubleCharTokens));
-        else if (isNum(current)) tokens.push(token(parseNumber(src), TokenType.Number));
-        else if (isNegative(src)) tokens.push(token(parseNumber(src), TokenType.Number));
-        else if (current == '"' || current == "'") tokens.push(token(parseString(src), TokenType.String));
+        else if (isNum(current)) tokens.push(token(parseNumber(src, tokens[tokens.length - 1]), TokenType.Number));
+        else if (isNegative(src, tokens[tokens.length - 1])) tokens.push(token(parseNumber(src, tokens[tokens.length - 1]), TokenType.Number));
+        else if (isString(current)) tokens.push(token(parseString(src), TokenType.String));
         else if (current in singleCharTokens) tokens.push(token(src.shift(), singleCharTokens[current]));
         else if (isAlpha(current)) tokens.push(parseIdentifierOrKeyword(src));
         else throw handleError(new LexerError("Unrecognized character found in source: " + JSON.stringify(current).charCodeAt(0)), currentLine, currentColumn);

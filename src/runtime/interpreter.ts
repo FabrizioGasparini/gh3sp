@@ -5,17 +5,22 @@ import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_ex
 import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
 import { handleError, InterpreterError } from "../utils/errors_handler.ts";
 
+// Declares current line & column, useful for errors handling
 let currentLine: number = 0;
 let currentColumn: number = 0;
 
+// Evaluates nodes given from the parser
 export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
+    // Throws an error if the node is not valid
     if (!astNode) throwError(new InterpreterError(`Invalid node. ${astNode}`));
-
+    
+    // If the current node has a line and a column, sets them as the current line and current column
     if (astNode.line && astNode.column) {
         currentLine = astNode.line;
         currentColumn = astNode.column;
     }
 
+    // Evaluates the given node by its kind
     switch (astNode.kind) {
         case "Program":
             return evaluate_program(astNode as Program, env);
@@ -87,6 +92,4 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     }
 }
 
-export function throwError(error: Error) {
-    throw handleError(error, currentLine, currentColumn);
-}
+export const throwError = (error: Error) => {throw handleError(error, currentLine, currentColumn)}

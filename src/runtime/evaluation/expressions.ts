@@ -5,75 +5,75 @@ import { evaluate, throwError } from "../interpreter.ts";
 import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values.ts";
 import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values.ts";
 
+// Evaluates a numeric expression between two given 'NumberValue's and an operator and returns its result
 function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
-    let result: number = 0;
-
     switch (operator) {
         case "+":
-            result = left.value + right.value;
-            break;
+            return { value: left.value + right.value, type: "number" } as NumberValue;
 
         case "-":
-            result = left.value - right.value;
-            break;
-
+            return { value: left.value - right.value, type: "number" } as NumberValue;
+             
         case "*":
-            result = left.value * right.value;
-            break;
+            return { value: left.value * right.value, type: "number" } as NumberValue;
 
         case "/":
-            if (right.value === 0) throw throwError(new MathError("Division by zero is not allowed"));
-            result = left.value / right.value;
-            break;
+            if (right.value === 0) throwError(new MathError("Division by zero is not allowed"));
+            return { value: left.value / right.value, type: "number" } as NumberValue;
 
         case "%":
-            result = left.value % right.value;
-            break;
-
+            return { value: left.value % right.value, type: "number" } as NumberValue;
+        
         case "^":
-            result = left.value ** right.value;
-            break;
-
+            return { value: left.value ** right.value, type: "number" } as NumberValue;
+        
         case "//":
-            result = parseInt((left.value / right.value).toString());
-            break;
+            return { value: parseInt((left.value / right.value).toString()), type: "number" } as NumberValue;
+        
+        default:
+            throw throwError(new InterpreterError("Invalid binary expression operator: " + operator))
     }
-
-    return { value: result, type: "number" } as NumberValue;
 }
 
-function evaluate_string_binary_expression(left: StringValue, right: StringValue, operator: string): StringValue {
-    let result: string = "";
+// Evaluates an expression between two given 'StringValue's and an operator and returns its result
+const evaluate_string_binary_expression = (left: StringValue, right: StringValue, operator: string): StringValue => (
+    (operator == "+")
+        ? { value: left.value + right.value, type: "string" } as StringValue
+        : throwError(new InterpreterError("Invalid operation between strings: '" + operator + "'"))
+)
 
-    if (operator == "+") result = left.value + right.value;
-    else throwError(new InterpreterError("Invalid operation between strings: '" + operator + "'"));
+// Evaluates an expression between a given 'StringValue', a given 'NumberValue' and an operator and returns its result
+const evaluate_mixed_string_numeric_binary_expression = (string: StringValue, number: NumberValue, operator: string): StringValue => (
+    (operator == "*")
+        ? { value: string.value.repeat(number.value), type: "string" } as StringValue
+        : throwError(new InterpreterError("Invalid operation between string and number: '" + operator + "'"))
+)
 
-    return { value: result, type: "string" } as StringValue;
-}
+// Evaluates an expression between two given 'ListValue's and an operator and returns its result
+const evaluate_list_binary_expression = (left: ListValue, right: ListValue, operator: string): ListValue => (
+    (operator == "+")
+        ? { type: "list", value: right.value.concat(left.value) } as ListValue
+        : throwError(new InterpreterError("Invalid operation between lists : '" + operator + "' "))
+)
 
-function evaluate_mixed_string_numeric_binary_expression(string: StringValue, number: NumberValue, operator: string): StringValue {
-    let result: string = "";
-
-    if (operator == "*") for (let i = 0; i < number.value; i++) result += string.value;
-    else throw throwError(new InterpreterError("Invalid operation between string and number: '" + operator + "'"));
-
-    return { value: result, type: "string" } as StringValue;
-}
-
+// Evaluates an expression between two given generic 'RuntimeValue's and an operator and returns its result
 function evaluate_mixed_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): RuntimeValue {
     switch (left.type) {
+        // If the left value is a 'NumberValue'
         case "number": {
             if(right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, operator);
             else if (right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, operator);
             break;
         }
         
+        // If the left value is a 'StringValue'
         case "string": {
             if (right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, operator);
             else if (right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, operator);
             break;
         }
         
+        // If the left value is a 'ListValue'
         case "list": {
             if (right.type == "list") return evaluate_list_binary_expression(left as ListValue, right as ListValue, operator);
             break;
@@ -83,64 +83,48 @@ function evaluate_mixed_binary_expression(left: RuntimeValue, right: RuntimeValu
     return MK_NULL()
 }
 
-function evaluate_list_binary_expression(left: ListValue, right: ListValue, operator: string): ListValue {
-    switch (operator) {
-        case "+":
-            return {
-                type: "list",
-                value: right.value.concat(left.value),
-            } as ListValue;
-
-        default:
-            throw throwError(new InterpreterError("Invalid operation '" + operator + "' between lists"));
-    }
-}
-
+// Returns 'true' if the two given lists are equal
 function compare_lists(a: RuntimeValue[], b: RuntimeValue[]): boolean {
     if (a.length != b.length) return false;
     
-    for (let i = 0; i < a.length - 1; i++)
-    {
-        if (a[i].value != b[i].value) return false;
-    }
-
+    for (let i = 0; i < a.length - 1; i++) if (a[i].value != b[i].value) return false;
+    
     return true;
 }
 
+// Evaluates a comparison expression between two given generic 'RuntimeValue's and an operator and returns its result
 function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
     switch (operator) {
         case "==":
             if (left.type == right.type) {
                 if (left.type == "list") return MK_BOOL(compare_lists(left.value, right.value))
-                    else return MK_BOOL(left.value == right.value);
+                
+                return MK_BOOL(left.value == right.value);
             }
             break;
             
         case "!=":
             if (left.type == right.type) {
                 if (left.type == "list") return MK_BOOL(!compare_lists(left.value, right.value))
-                    else return MK_BOOL(left.value != right.value);
+                
+                return MK_BOOL(left.value != right.value);
             }
             break;
 
         case ">=":
-            if (left.type == "boolean" && right.type == "boolean") return MK_BOOL(left.value >= right.value);
-            else if (left.type == "number" && right.type == "number") return MK_BOOL(left.value >= right.value);
+            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value >= right.value);
             break;
 
         case "<=":
-            if (left.type == "boolean" && right.type == "boolean") return MK_BOOL(left.value <= right.value);
-            else if (left.type == "number" && right.type == "number") return MK_BOOL(left.value <= right.value);
+            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value <= right.value);
             break;
 
         case ">":
-            if (left.type == "boolean" && right.type == "boolean") return MK_BOOL(left.value > right.value);
-            else if (left.type == "number" && right.type == "number") return MK_BOOL(left.value > right.value);
+            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value > right.value);
             break;
 
         case "<":
-            if (left.type == "boolean" && right.type == "boolean") return MK_BOOL(left.value < right.value);
-            else if (left.type == "number" && right.type == "number") return MK_BOOL(left.value < right.value);
+            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value < right.value);
             break;
 
         default:
@@ -150,65 +134,74 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
     throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'" + " between type '" + left.type + "' and '" + right.type + "'"));
 }
 
+// Evaluates a 'BinaryExpression' and returns its result
 export function evaluate_binary_expression(node: BinaryExpression, env: Environment): RuntimeValue {
     const left = evaluate(node.left, env);
     const right = evaluate(node.right, env);
     
-    const op = node.operator;
-
+    if(node.negative) right.value *= -1
     if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
-
+    
+    const op = node.operator;
     if (op == "??") return left.type == "null" ? right : left;
 
-    if (op == "+" || op == "-" || op == "*" || op == "/" || op == "%" || op == "^" || op == "//") return evaluate_mixed_binary_expression(left, right, op);
-    else if (op == "==" || op == "!=" || op == "<=" || op == ">=" || op == "<" || op == ">") return evaluate_comparison_binary_expression(left, right, op);
+    const binary_operators = ["+", "-", "*", "/", "%", "^", "//"]
+    if (binary_operators.includes(op)) return evaluate_mixed_binary_expression(left, right, op);
+    
+    const comparison_operators = ["==", "!=", "<=", ">=", "<", ">"]
+    if (comparison_operators.includes(op)) return evaluate_comparison_binary_expression(left, right, op);
 
     return MK_NULL();
 }
 
+// Evaluates a 'LogicalExpression' and returns its result
 export function evaluate_logical_expression(node: LogicalExpression, env: Environment): RuntimeValue {
     const left = evaluate(node.left, env);
     const right = evaluate(node.right, env);
 
-    const op = node.operator;
-
+    // Throws an error if either left node or right node are undefined
     if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside logical expression"));
     
-    
-    if (op == "&&") return MK_BOOL(left.value && right.value);
-    else if (op == "||") return MK_BOOL(left.value || right.value);
-    else if (op == "!") {
-        if (left.type != "boolean" || right.type != "boolean") throw throwError(new InterpreterError("Invalid parameter inside logical expression. Expected boolean value."));
-        return MK_BOOL(!right.value);
+    const op = node.operator;
+    switch (op) {
+        case "&&":
+            return MK_BOOL(left.value && right.value);
+        
+        case "||":
+            return MK_BOOL(left.value || right.value);
+        
+        case "!":
+            // Throws an error if either left node or right node are not booleans
+            if (left.type != "boolean" || right.type != "boolean") throw throwError(new InterpreterError("Invalid parameter inside logical expression. Expected boolean value."));
+            return MK_BOOL(!right.value);
+        
+        default:
+            return MK_NULL()
     }
-
-    return MK_NULL();
 }
 
-export function evaluate_identifier(ident: Identifier, env: Environment): RuntimeValue {
-    const val = env.lookupVar(ident.symbol);
-    return val;
-}
+// Returns a 'RuntimeValue' from a given 'Identifier'
+export const evaluate_identifier = (ident: Identifier, env: Environment): RuntimeValue => ( env.lookupVar(ident.symbol) )
 
 function get_member_expression_result(node: MemberExpression, env: Environment): RuntimeValue {
     let object = node.object
     if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
 
-    const object_name = (object as Identifier).symbol
-    return (env.lookupVar(object_name) as ObjectValue)
+    return (env.lookupVar((object as Identifier).symbol) as ObjectValue)
 }
 
+// Returns an 'Identifier' from a given 'MemberExpression' node
 function get_member_expression_variable(node: MemberExpression): Identifier {
     let object = node.object
     if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
-
-    const object_name = (object as Identifier)
-    return object_name
+    
+    return object as Identifier
 }
 
+// Returns an list of string properties from a given 'MemberExpression' node
 function get_object_props(node: MemberExpression): string[] {
     let object = node.object
-    
+    // If the member expression is computed, set the first props as a 'StringLiteral' type, else set it as an 'Identifier'
     const props: string[] = [node.computed ? (node.property as StringLiteral).value : (node.property as Identifier).symbol]
     
     if (node.computed) {
@@ -233,6 +226,7 @@ function get_object_props(node: MemberExpression): string[] {
     return props
 }
 
+// Evaluates an assignment expression and returns its result
 export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
     switch (node.assignee.kind) {
         // a = value
@@ -285,24 +279,9 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
         default:
             throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
     }
-   
-    
-    /*
-    const variable = get_expression_result((node.assignee as MemberExpression), env)
-    if(variable.type == "list") {
-        const list = variable as ListValue;
-        const idx = evaluate((node.assignee as MemberExpression).property, env) as NumberValue;
-        list.value[idx.value] = evaluate(node.value, env);
-        return env.assignVar(varname, list);
-    } else if (variable.type == "object") {
-        const obj = env.lookupVar(varname) as ObjectValue;
-        const key = ((node.assignee as MemberExpression).property as Identifier).symbol
-        obj.properties.set(key, evaluate(node.value, env))
-        return env.assignVar(varname, obj)
-    } else return MK_NULL()
-    */
 }
 
+// Evaluates a compound assignment expression and returns its result
 export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
     const op = node.operator.substring(0, node.operator.length - 1);
     
@@ -366,8 +345,6 @@ export function evaluate_compound_assignment_expression(node: CompoundAssignment
                 default:
                     throw throwError(new InterpreterError("Invalid compound assignment"))
             }
-
-            break
         }
             
         case "Identifier": {
@@ -389,6 +366,7 @@ export function evaluate_compound_assignment_expression(node: CompoundAssignment
     
 }
 
+// Evaluates an object expression and returns its result
 export function evaluate_object_expression(obj: ObjectLiteral, env: Environment): RuntimeValue {
     const object = { type: "object", properties: new Map(), native: false } as ObjectValue;
     for (const { key, value } of obj.properties) {
@@ -400,6 +378,7 @@ export function evaluate_object_expression(obj: ObjectLiteral, env: Environment)
     return object;
 }
 
+// Evaluates a member expression and returns its result
 export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
     const object: Expression = get_member_expression_variable(member);
     const props = get_object_props(member)
@@ -415,17 +394,17 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
         
             const key = props.pop()!
             
-            if (!key) throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
+            if (!key)
+                throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
             
             let result = variable;
-            for (const prop of props) {
-                if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
-            }
+            for (const prop of props)
+                if ((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
+            
                 
-            if (!(result as ObjectValue).properties.has(key)) {
+            if (!(result as ObjectValue).properties.has(key))
                 return MK_NULL()
-                //throw throwError(new InterpreterError("Invalid object key (not found)"))
-            }
+            
             
             return (result as ObjectValue).properties.get(key)!
         }
@@ -447,14 +426,14 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
     }
 }
 
+// Evaluates a call expression and returns its result
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {
     const args = call.args.map((arg: Expression) => evaluate(arg, env));
     const fn = evaluate(call.caller, env);
 
-    if (fn.type == "native-function") {
-        const result = (fn as NativeFunctionValue).call(args, call.line!, call.column!, env);
-        return result;
-    }
+    if (fn.type == "native-function")
+        return (fn as NativeFunctionValue).call(args, call.line!, call.column!, env);;
+    
 
     if (fn.type == "function") {
         const func = fn as FunctionValue;
@@ -474,19 +453,14 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
     throw throwError(new InterpreterError("Cannot call value that is not a function: " + JSON.stringify(fn)));
 }
 
-export function evaluate_list_expression(list: ListLiteral, env: Environment): RuntimeValue {
-    const ls = { type: "list", value: [] } as ListValue;
+// Evaluates a list expression and returns its result
+export const evaluate_list_expression = (list: ListLiteral, env: Environment): RuntimeValue => (
+    { type: "list", value: list.values.map(value => evaluate(value, env)) } as ListValue
+)
 
-    for (const value of list.values) {
-        ls.value.push(evaluate(value, env));
-    }
-
-    return ls;
-}
-
-export function evaluate_ternary_expression(node: TernaryExpression, env: Environment): RuntimeValue {
-    const condition = evaluate(node.condition, env);
-
-    if (condition.value) return evaluate(node.left, env);
-    else return evaluate(node.right, env)
-}
+// Evaluates a ternary expression and returns its result
+export const evaluate_ternary_expression = (node: TernaryExpression, env: Environment): RuntimeValue => (
+    evaluate(node.condition, env)
+        ? evaluate(node.left, env)
+        : evaluate(node.right, env)
+)
