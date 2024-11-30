@@ -2,6 +2,7 @@ import { MK_BOOL, type FunctionCall } from "../values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values.ts";
 import { handleError } from "../../utils/errors_handler.ts";
 import * as readlineSync from "readline-sync";
+import type Environment from "../environments.ts";
 
 const throwError = (error: string, line: number, column: number) => { throw handleError(new SyntaxError(error), line, column) };
 
@@ -177,5 +178,15 @@ function get_length(node: RuntimeValue, line: number, column: number) {
     }
 }
 
+const unreactive: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
+    if (args.length != 1)
+        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+
+    if (args[0].type != "reactive")
+        throwError("Expected argument type 'reactive', got '" + args[0].type + "'", line, column)
+
+    console.log(args[0])
+    return MK_NULL()
+}
 // List of all the functions which are built-in in the 'gh3sp' language
-export const built_in_functions: FunctionCall[] = [time, str, int, float, type, print, length, input];
+export const built_in_functions: FunctionCall[] = [time, str, int, float, type, print, length, input, unreactive];

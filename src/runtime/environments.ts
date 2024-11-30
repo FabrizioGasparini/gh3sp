@@ -1,8 +1,8 @@
 import { built_in_libraries } from "./built-in/libraries.ts";
 import { InterpreterError } from "../utils/errors_handler.ts";
 import { built_in_functions } from "./built-in/functions.ts";
-import { throwError } from "./interpreter.ts";
-import { MK_NATIVE_FUNCTION, RuntimeValue } from "./values.ts";
+import { evaluate, throwError } from "./interpreter.ts";
+import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "./values.ts";
 import { built_in_constants } from "./built-in/constants.ts";
 
 // Creates the global environment of the program
@@ -70,8 +70,13 @@ export default class Environment {
     }
 
     // Returns the value of a given variable
-    public lookupVar = (varname: string): RuntimeValue => this.resolve(varname).variables.get(varname) as RuntimeValue;
-
+    public lookupVar = (varname: string): RuntimeValue => {
+        const variable = this.resolve(varname).variables.get(varname) as RuntimeValue;
+        if (variable.type == "reactive")
+            return evaluate((variable as ReactiveValue).value, this.resolve(varname))    
+        
+        return variable;
+    };
     // Returns the environment where the given variable is found
     public resolve(varname: string): Environment {
         // If the variable is in the current environment, returns the env

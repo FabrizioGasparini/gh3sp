@@ -130,10 +130,13 @@ v2.2.0
   # Fixes:
     -> Fixed comparison operations between lists: Now comparing lists (==, !=) works as expected
 
-v2.2.1
+v2.2.1 
+  # Features
+    -> Reactive Variables
   # Changes
     -> Parser now doesn't automatically start evaluating the program through the interpreter, but instead it returns it to the main file, which run the interpreter's evaluation itself. This way the gh3sp-extension can parse the code and not run it immediately
     -> Complete code revision & correction
+    -> Complete code comments
   # Fixes
     -> Variable names can now contains digit characters [0-9] but not at the start of the name (e.g. var_1 --> yes, 1_var --> no)
     -> Obj access with obj[value] or obj.value, with value as a non-existing key inside the object, now sets a new key inside the object: let obj = {"a": 2}    obj["b"] ??= 5 --> {"a": 2, "undefined": 5}

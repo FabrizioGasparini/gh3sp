@@ -3,13 +3,17 @@ import { InterpreterError } from "../../utils/errors_handler.ts";
 import Environment from "../environments.ts";
 import { evaluate, throwError } from "../interpreter.ts";
 import { compileLibrary } from "../libraries.ts";
-import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER } from "../values.ts";
+import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER, type ReactiveValue } from "../values.ts";
 
 export const evaluate_program = (program: Program, env: Environment): RuntimeValue => (program.body.map(stmt => evaluate(stmt, env))[program.body.length - 1])
 
 // Adds the given variable to the given environment and returns it 
 export function evaluate_variable_declaration(declaration: VariableDeclaration, env: Environment): RuntimeValue {
-    const value = declaration.value ? evaluate(declaration.value, env) : MK_NULL();
+    const value = declaration.value
+        ? declaration.reactive
+            ? { type: "reactive", value: declaration.value! } as ReactiveValue
+            : evaluate(declaration.value, env)
+        : MK_NULL();
     
     // If the value is a list, the variable takes the name of the list's name 
     if (declaration.value?.kind == "ListLiteral") (value as ListValue).name = (declaration.assignee as Identifier).symbol;

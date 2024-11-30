@@ -230,7 +230,7 @@ function get_object_props(node: MemberExpression): string[] {
 export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
     switch (node.assignee.kind) {
         // a = value
-        case "Identifier":            
+        case "Identifier":    
             return env.assignVar((node.assignee as Identifier).symbol, evaluate(node.value, env));
         
         // obj[key] = value, list[idx] = value

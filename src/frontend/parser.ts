@@ -82,7 +82,6 @@ export default class Parser {
         
         // Parse until END OF FILE
         while (this.not_eof()) {
-
             if (this.isEndOfLine()) {
                 this.skipNewLine();
                 if (!this.not_eof()) break;
@@ -143,6 +142,7 @@ export default class Parser {
             case TokenType.Import:
                 throw this.throwError(new ParserError("Libraries can only be imported at the start of the program."))
         
+            // If it's not a statement, parse an expression
             default:
                 return this.parse_expression();
         }
@@ -183,18 +183,29 @@ export default class Parser {
             // Eat the '{' token
             this.eat();
 
+            // While the body is not closed
             while (this.at().type != TokenType.CloseBrace) {
+                // Skips all the empty lines
                 while (this.isEndOfLine()) this.skipNewLine();
                 
+                // If it's at the end of the body, breaks out of the loop
                 if (this.at().type == TokenType.CloseBrace) break;
                 
+                // Pushes the parsed statement to the function body's list
                 body.push(this.parse_statement());
             }
+            // Expects a '}' token after the function body
             this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
-        } else if (this.at().type == TokenType.ArrowOperator) {
-            this.eat(); // Go past =>
+        }
+        // If it's an in-line function
+        else if (this.at().type == TokenType.ArrowOperator) {
+            // Eat the '=>' token
+            this.eat();
+            // Pushes the parsed statement to the function body's list
             body.push(this.parse_statement());     
-        } else this.throwError(new SyntaxError("Expected '{' of '=>' after function arguments declaration"))
+        }
+        // Throws an error if the function declaration isn't followed by a '{' or a '=>' token
+        else this.throwError(new SyntaxError("Expected '{' of '=>' after function declaration"))
 
         const fn = {
             kind: "FunctionDeclaration",
@@ -210,28 +221,44 @@ export default class Parser {
 
     // Returns a variable declaration statement
     private parse_variable_declaration(): Statement {
+        // True if the next token is of type 'Const'
         const isConstant = this.eat().type == TokenType.Const;
+        // Expects an identifier as the next token and gets it's value
         const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
-
+        
         const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
 
+        // If the next token is a new line or the end of the file
         if (this.isEndOfLine() || !this.not_eof()) {
+            // Throws an error if the variable is a constant
             if (isConstant) this.throwError(new SyntaxError(`Must assign value to constant expression '${assignee}'. No value provided.`));
 
+            // Returns a variable with undefined value
             return {
                 kind: "VariableDeclaration",
                 assignee,
                 constant: false,
                 line: this.currentLine,
                 column: this.currentColumn,
-                negative: false
+                negative: false,
+                reactive: false
             } as VariableDeclaration;
         }
-        this.expect(TokenType.Equal, "Expected equals token following identifier in variable declaration");
 
+        // True if the following token is of type 'ArrowOperator (=>)' 
+        const reactive: boolean = this.at().type == TokenType.ArrowOperator;
+        // Throws an error if the variable declaration isn't followed by a '=' or a '=>' token
+        if (this.at().type != TokenType.Equal && this.at().type != TokenType.ArrowOperator)
+            this.throwError(new SyntaxError("Expected '=' of '=>' after variable declaration"))
+        
+        // Eats the '=' or '=>' token
+        this.eat()
+
+        // Sets declaring mode to true
         this.isDeclaring = true;
+        // True if the following token has a value of '-'
         const negative = this.at().value == "-"
-
+        
         const declaration = {
             kind: "VariableDeclaration",
             assignee,
@@ -239,9 +266,11 @@ export default class Parser {
             value: this.parse_statement(),
             line: this.currentLine,
             column: this.currentColumn,
-            negative
+            reactive,
+            negative,
         } as VariableDeclaration;
 
+        // Sets declaring mode to false
         this.isDeclaring = false;
 
         return declaration;
@@ -249,51 +278,90 @@ export default class Parser {
 
     // Returns an if statement
     private parse_if_statement(): Statement {
-        this.eat(); // Go past 'if' token
+        // Eats the 'if' token
+        this.eat();
 
-        this.expect(TokenType.OpenParen, "Expected '(' following if keyword");
+        // Expects a '(' token after the if keyword
+        this.expect(TokenType.OpenParen, "Expected '(' following 'if' keyword");
 
+        // Parses the if condition
         const condition = this.parse_expression();        
-        if(!condition) throw this.throwError(new SyntaxError("Expected condition inside if statement"));
+        // Throws an error if the condition is not found
+        if(!condition) throw this.throwError(new SyntaxError("Expected a valid condition for the 'if' statement"));
         
-        this.expect(TokenType.CloseParen, "Expected ')' following if condition");
+        // Expects a ')' token after the if condition
+        this.expect(TokenType.CloseParen, "Expected ')' following 'if' condition");
 
-        const thenBranch: Statement[] = [];
+        // Declares the 'than' body list
+        const thenBody: Statement[] = [];
         if (this.at().type == TokenType.OpenBrace) {
-            this.expect(TokenType.OpenBrace, "Expected '{' following if condition");
-
-            while (this.at().type != TokenType.CloseBrace) thenBranch.push(this.parse_statement());
-
-            this.expect(TokenType.CloseBrace, "Expected '}' at the end of if block");
-        } else if (this.at().type == TokenType.ArrowOperator) {
-            this.eat(); // Go past =>
-            thenBranch.push(this.parse_statement());
-        } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of if statement"))
+            // Eat the '{' token
+            this.eat();
+            // While the body is not closed
+            while (this.at().type != TokenType.CloseBrace) {
+                // Skips all the empty lines
+                while (this.isEndOfLine()) this.skipNewLine();
+                
+                // If it's at the end of the body, breaks out of the loop
+                if (this.at().type == TokenType.CloseBrace) break;
+                
+                // Pushes the parsed statement to the 'if' body's list
+                thenBody.push(this.parse_statement());
+            }
+            // Expects a '}' token after the if body
+            this.expect(TokenType.CloseBrace, "Expected '}' following 'if' body");
+        }
+        // If it's an in-line statement
+        else if (this.at().type == TokenType.ArrowOperator) {
+            // Eat the '=>' token
+            this.eat();
+            // Pushes the parsed statement to the 'if' body's list
+            thenBody.push(this.parse_statement());  
+        }
+        // Throws an error if the 'if' condition isn't followed by a '{' or a '=>' token
+        else this.throwError(new SyntaxError("Expected '{' of '=>' following 'if' body"))
         
-        const elseBranch: Statement[] | undefined = [];
+        // Declares the 'else' body list
+        const elseBody: Statement[] | undefined = [];
         if (this.at().type == TokenType.Else) {
+            // Eat the 'else' token
             this.eat();
             
-            if (this.at().type == TokenType.If) elseBranch.push(this.parse_if_statement());
+            // If the next token is of type 'if' add a new if statement to the else body 
+            if (this.at().type == TokenType.If) elseBody.push(this.parse_if_statement());
             else {
                 if (this.at().type == TokenType.OpenBrace) {
-                    this.expect(TokenType.OpenBrace, "Expected '{' following if condition");
-                    
-                    while (this.at().type != TokenType.CloseBrace) elseBranch.push(this.parse_statement());
-                    
-                    this.expect(TokenType.CloseBrace, "Expected '}' at the end of else block");
+                    // Eat the '{' token
+                    this.eat();
+                    // While the body is not closed
+                    while (this.at().type != TokenType.CloseBrace) {
+                        // Skips all the empty lines
+                        while (this.isEndOfLine()) this.skipNewLine();
+                        
+                        // If it's at the end of the body, breaks out of the loop
+                        if (this.at().type == TokenType.CloseBrace) break;
+                        
+                        // Pushes the parsed statement to the 'else' body's list
+                        elseBody.push(this.parse_statement());
+                    }
+                    // Expects a '}' token after the else body
+                    this.expect(TokenType.CloseBrace, "Expected '}' following 'else' body");
                 } else if (this.at().type == TokenType.ArrowOperator) {
-                    this.eat(); // Go past =>
-                    elseBranch.push(this.parse_statement());            
-                } else this.throwError(new SyntaxError("Expected '{' of '=>' at the end of else statement"))
+                    // Eat the '=>' token
+                    this.eat();
+                    // Pushes the parsed statement to the 'else' body's list
+                    elseBody.push(this.parse_statement());           
+                }
+                // Throws an error if the 'else' condition isn't followed by a '{' or a '=>' token
+                else this.throwError(new SyntaxError("Expected '{' of '=>' following 'else' body"))
             }
         }
         
         return {
             kind: "IfStatement",
             condition,
-            then: thenBranch,
-            else: elseBranch,
+            then: thenBody,
+            else: elseBody,
             line: this.currentLine,
             column: this.currentColumn,
         } as IfStatement;
