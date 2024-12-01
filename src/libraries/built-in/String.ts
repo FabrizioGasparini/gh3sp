@@ -5,7 +5,7 @@ import { parse } from "../../runtime/built-in/functions.ts"
 const join: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     let string = ""
     args.forEach(arg => {
-        if (arg.type != "string" && arg.type != "number" && arg.type != "list" && arg.type) handleError(new SyntaxError(`Invalid argument type '${arg.type}'`), line, column);
+        if (arg.type != "string" && arg.type != "number" && arg.type != "list" && arg.type != "reactive" && arg.type) handleError(new SyntaxError(`Invalid argument type '${arg.type}'`), line, column);
         string += parse(arg);
     });
 

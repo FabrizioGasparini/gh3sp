@@ -8,6 +8,7 @@ export type NodeType =
     | "ForEachStatement"
     | "WhileStatement"
     | "ImportStatement"
+    | "ControlFlowStatement"
 
     // Expressions
     | "AssignmentExpression"
@@ -87,6 +88,11 @@ export interface WhileStatement extends Statement {
 export interface ImportStatement extends Statement {
     kind: "ImportStatement";
     path: string;
+}
+
+export interface ControlFlowStatement extends Expression {
+    kind: "ControlFlowStatement";
+    value: "break" | "continue" | "pass";
 }
 
 export interface Expression extends Statement {}

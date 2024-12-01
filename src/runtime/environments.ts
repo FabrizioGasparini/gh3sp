@@ -24,6 +24,7 @@ export default class Environment {
     public parent?: Environment;
     // Max number of allowed iterations
     public MAX_ITERATIONS: number;
+    public inside_loop: boolean = false;
 
     // Map of the environment's declared variables
     private variables: Map<string, RuntimeValue>;
@@ -45,7 +46,7 @@ export default class Environment {
     // Declares a new variable/constant, given it's name and it's value
     public declareVar(varname: string, value: RuntimeValue, constant: boolean): RuntimeValue {
         // Throws an error if the given varname already exits in the environment
-        if (this.variables.has(varname)) throwError(new InterpreterError(`Cannot declare variable '${varname}' as it already is defined.`));
+        if (this.variables.has(varname)) throwError(new InterpreterError(`Cannot declare variable '${varname}' as it already is defined`));
 
         // Sets the new variable to the variables map
         this.variables.set(varname, value);
@@ -56,13 +57,18 @@ export default class Environment {
         return value;
     }
 
-    // Assigns a new variable to a given variable
-    public assignVar(varname: string, value: RuntimeValue): RuntimeValue {
+    // Assigns a new value to a given variable
+    public assignVar(varname: string, value: RuntimeValue, force: boolean = false): RuntimeValue {
         // Gets the variable which the variable is is
         const env = this.resolve(varname);
 
-        // Throws an error if the given varname is inside the constants map
-        if (env.constants.has(varname)) throw throwError(new InterpreterError(`Cannot reassign to variable ${varname} as it was declared constant.`));
+        // If the assignment is not forced
+        if (!force) {
+            // Throws an error if the given varname is inside the constants map
+            if (env.constants.has(varname)) throw throwError(new InterpreterError(`Cannot reassign to variable '${varname}' as it was declared as a constant`));
+            // Throws an error if the given varname is of type reactive
+            if (env.variables.get(varname)?.type == "reactive") throw throwError(new InterpreterError(`Cannot reassign to variable '${varname}' as it was declared as reactive`));
+        }
 
         // Sets the new given value to the given variable
         env.variables.set(varname, value);
@@ -73,8 +79,8 @@ export default class Environment {
     public lookupVar = (varname: string): RuntimeValue => {
         const variable = this.resolve(varname).variables.get(varname) as RuntimeValue;
         if (variable.type == "reactive")
-            return evaluate((variable as ReactiveValue).value, this.resolve(varname))    
-        
+            return { type: "reactive", value: evaluate((variable as ReactiveValue).node, this.resolve(varname)), node: (variable as ReactiveValue).node, name: (variable as ReactiveValue).name } as ReactiveValue;
+
         return variable;
     };
     // Returns the environment where the given variable is found
@@ -83,7 +89,7 @@ export default class Environment {
         if (this.variables.has(varname)) return this;
 
         // Throws an error if this environment doesn't have a parent
-        if (this.parent == undefined) throw throwError(new InterpreterError(`Cannot resolve '${varname}' as it does not exists.`));
+        if (this.parent == undefined) throw throwError(new InterpreterError(`Cannot resolve '${varname}' as it does not exists`));
 
         // Searches the given variable in the parent environment and returns it
         return this.parent.resolve(varname);

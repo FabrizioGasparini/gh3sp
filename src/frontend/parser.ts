@@ -1,7 +1,7 @@
 import type Environment from "../runtime/environments.ts";
 import { compileLibrary } from "../runtime/libraries.ts";
 import { handleError, ParserError } from "../utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression } from "./ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement } from "./ast.ts";
 import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
 import { tokenize, Token, TokenType } from "./lexer.ts";
 
@@ -138,7 +138,17 @@ export default class Parser {
             case TokenType.ForEach:
                 stmt = this.parse_foreach_statement();
                 break;
-
+            
+            case TokenType.Break:
+                stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
+                break;
+            case TokenType.Continue:
+                stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
+                break;
+            case TokenType.Pass:
+                stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
+                break;
+            
             case TokenType.Import:
                 throw this.throwError(new ParserError("Libraries can only be imported at the start of the program."))
         
@@ -221,8 +231,16 @@ export default class Parser {
 
     // Returns a variable declaration statement
     private parse_variable_declaration(): Statement {
-        // True if the next token is of type 'Const'
+        // True if the following token is of type 'Const'
         const isConstant = this.eat().type == TokenType.Const;
+
+        // True if the following token is of type 'Reactive' 
+        const reactive: boolean = this.at().type == TokenType.Reactive;
+        
+        // If the variable is reactive, eats the 'reactive' token
+        if (reactive)
+            this.eat()
+        
         // Expects an identifier as the next token and gets it's value
         const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
         
@@ -245,15 +263,9 @@ export default class Parser {
             } as VariableDeclaration;
         }
 
-        // True if the following token is of type 'ArrowOperator (=>)' 
-        const reactive: boolean = this.at().type == TokenType.ArrowOperator;
-        // Throws an error if the variable declaration isn't followed by a '=' or a '=>' token
-        if (this.at().type != TokenType.Equal && this.at().type != TokenType.ArrowOperator)
-            this.throwError(new SyntaxError("Expected '=' of '=>' after variable declaration"))
+        // Expects a '=' token following the variable identifier
+        this.expect(TokenType.Equal, "Expected '=' after variable declaration")
         
-        // Eats the '=' or '=>' token
-        this.eat()
-
         // Sets declaring mode to true
         this.isDeclaring = true;
         // True if the following token has a value of '-'

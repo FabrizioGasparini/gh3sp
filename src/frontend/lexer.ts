@@ -16,7 +16,11 @@ export enum TokenType {
     While,
     ForEach,
     In,
+    Break,
+    Continue,
+    Pass,
     Import,
+    Reactive,
 
     // Operators
     BinaryOperator,
@@ -68,7 +72,13 @@ const KEYWORDS: Record<string, TokenType> = {
     foreach: TokenType.ForEach,
     in: TokenType.In,
 
+    break: TokenType.Break,
+    continue: TokenType.Continue,
+    pass: TokenType.Pass,
+
     import: TokenType.Import,
+
+    reactive: TokenType.Reactive,
 };
 
 const singleCharTokens: Record<string, TokenType> = {

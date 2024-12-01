@@ -1,17 +1,17 @@
-import { MK_BOOL, type FunctionCall } from "../values.ts";
+import { MK_BOOL, type FunctionCall, type ReactiveValue } from "../values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values.ts";
 import { handleError } from "../../utils/errors_handler.ts";
-import * as readlineSync from "readline-sync";
+import * as readlineSync from "readline-sync.ts";
 import type Environment from "../environments.ts";
 
-const throwError = (error: string, line: number, column: number) => { throw handleError(new SyntaxError(error), line, column) };
+const throwError = (error: Error, line: number, column: number) => { throw handleError(error, line, column) };
 
 const time: FunctionCall = () => { return MK_NUMBER(Date.now()) };
 
 // Returns a string representation of the given argument
 export const str: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
     
     return MK_STRING(parse(args[0]))
 };
@@ -19,10 +19,10 @@ export const str: FunctionCall = (args: RuntimeValue[], line: number, column: nu
 // Returns the integer value of the given argument
 const int: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
     
     if (args[0].type != "string" && args[0].type != "number")
-        throwError("Expected argument type 'string|number', got '" + args[0].type + "'", line, column)
+        throwError(TypeError("Expected argument type 'string|number', got '" + args[0].type + "'"), line, column)
     
     return MK_NUMBER(parseInt(args[0].value))
 };
@@ -30,10 +30,10 @@ const int: FunctionCall = (args: RuntimeValue[], line: number, column: number) =
 // Returns the decimal value of the given argument
 const float: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
     
     if (args[0].type != "string" && args[0].type != "number")
-        throwError("Expected argument type 'string|number', got '" + args[0].type + "'", line, column)
+        throwError(TypeError("Expected argument type 'string|number', got '" + args[0].type + "'"), line, column)
     
     return MK_NUMBER(parseFloat(args[0].value))
 };
@@ -51,7 +51,7 @@ const print: FunctionCall = (args: RuntimeValue[]) => {
 const input: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     let string = "";
     if (args.length > 0)
-        if (args[0].type != "string") throwError("Expected argument type 'string', got '" + args[0].type + "'", line, column);
+        if (args[0].type != "string") throwError(TypeError("Expected argument type 'string', got '" + args[0].type + "'"), line, column);
         else string = args[0].value;
         
 
@@ -105,6 +105,9 @@ export function parse(node: RuntimeValue) {
         case "boolean":
         case "null":
             return node.value;
+            
+        case "reactive":
+            return node.value.value;
         
         case "object":
             return parse_object(node as ObjectValue);
@@ -155,7 +158,7 @@ function parse_list(list: ListValue) {
 // Returns the length of a given argument
 const length: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
     
     return MK_NUMBER(get_length(args[0], line, column));
 };
@@ -174,19 +177,20 @@ function get_length(node: RuntimeValue, line: number, column: number) {
             return (node as ObjectValue).properties.size;
 
         default:
-            throw throwError("Object of type '" + node.type + "' has no length", line, column);
+            throw throwError(SyntaxError("Object of type '" + node.type + "' has no length"), line, column);
     }
 }
 
 const unreactive: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
     if (args.length != 1)
-        throwError("Expected '1' argument, got '" + args.length + "'", line, column)
+        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
 
     if (args[0].type != "reactive")
-        throwError("Expected argument type 'reactive', got '" + args[0].type + "'", line, column)
+        throwError(TypeError("Expected argument type 'reactive', got '" + args[0].type + "'"), line, column)
 
-    console.log(args[0])
-    return MK_NULL()
+    const reactive = args[0] as ReactiveValue
+
+    return env.assignVar(reactive.name, reactive.value, true)
 }
 // List of all the functions which are built-in in the 'gh3sp' language
 export const built_in_functions: FunctionCall[] = [time, str, int, float, type, print, length, input, unreactive];

@@ -1,8 +1,8 @@
 import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL } from "./values.ts";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression } from "../frontend/ast.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression, type ControlFlowStatement } from "../frontend/ast.ts";
 import Environment from "./environments.ts";
 import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression, evaluate_ternary_expression } from "./evaluation/expressions.ts";
-import { evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
+import { evaluate_control_flow_statement, evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
 import { handleError, InterpreterError } from "../utils/errors_handler.ts";
 
 // Declares current line & column, useful for errors handling
@@ -86,6 +86,9 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
 
         case "ForEachStatement":
             return evaluate_foreach_statement(astNode as ForEachStatement, env);
+        
+        case "ControlFlowStatement":
+            return evaluate_control_flow_statement(astNode as ControlFlowStatement, env);
         
         default:
             throw throwError(new InterpreterError(`This AST Node has not yet been setup for interpretation. ${JSON.stringify(astNode)}`));

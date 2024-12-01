@@ -13,8 +13,9 @@ export async function compileLibrary(filePath: string) {
     let library;
     
     // If the filepath is in the default libraries, sets the library as that default library
-    if (filePath in default_libraries) for (const [key, value] of Object.entries(default_libraries)) if (key == filePath) library = value  
-    else {
+    if (filePath in default_libraries) {
+        for (const [key, value] of Object.entries(default_libraries)) if (key == filePath) library = value
+    } else {
         // Throws an error if the library path doesn't end with '.gh3lib'
         if(!fullPath.includes(".gh3lib")) throw handleError(new ImportError("Library file must be of type 'Gh3sp Library' (.gh3lib)", fullPath), 0, 0);
         

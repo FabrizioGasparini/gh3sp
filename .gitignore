@@ -4,6 +4,8 @@ prebuild.js
 postbuild.js
 gh3lib-builder
 gh3sp-lib
+gh3sp-ide
+gh3sp-ext
 test-libraries
 main.gh3
 out/

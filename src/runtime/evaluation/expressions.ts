@@ -78,6 +78,10 @@ function evaluate_mixed_binary_expression(left: RuntimeValue, right: RuntimeValu
             if (right.type == "list") return evaluate_list_binary_expression(left as ListValue, right as ListValue, operator);
             break;
         }
+            
+        default:
+            return MK_NULL()
+            //throw throwError(new InterpreterError("Invalid mixed expression type: " + left.type))
     }
 
     return MK_NULL()
@@ -94,6 +98,7 @@ function compare_lists(a: RuntimeValue[], b: RuntimeValue[]): boolean {
 
 // Evaluates a comparison expression between two given generic 'RuntimeValue's and an operator and returns its result
 function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
+
     switch (operator) {
         case "==":
             if (left.type == right.type) {
@@ -101,7 +106,8 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
                 
                 return MK_BOOL(left.value == right.value);
             }
-            break;
+
+            return MK_BOOL(false)
             
         case "!=":
             if (left.type == right.type) {
@@ -109,7 +115,8 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
                 
                 return MK_BOOL(left.value != right.value);
             }
-            break;
+
+            return MK_BOOL(true)
 
         case ">=":
             if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value >= right.value);
@@ -136,8 +143,11 @@ function evaluate_comparison_binary_expression(left: RuntimeValue, right: Runtim
 
 // Evaluates a 'BinaryExpression' and returns its result
 export function evaluate_binary_expression(node: BinaryExpression, env: Environment): RuntimeValue {
-    const left = evaluate(node.left, env);
-    const right = evaluate(node.right, env);
+    let left = evaluate(node.left, env);
+    let right = evaluate(node.right, env);
+
+    if(left.type == "reactive") left = left.value
+    if(right.type == "reactive") right = right.value
     
     if(node.negative) right.value *= -1
     if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
@@ -176,7 +186,7 @@ export function evaluate_logical_expression(node: LogicalExpression, env: Enviro
             return MK_BOOL(!right.value);
         
         default:
-            return MK_NULL()
+            throw throwError(new InterpreterError("Invalid logical expression operator: " + op))
     }
 }
 
@@ -380,8 +390,52 @@ export function evaluate_object_expression(obj: ObjectLiteral, env: Environment)
 
 // Evaluates a member expression and returns its result
 export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
+    const object = evaluate(member.object, env);
+    
+    switch (object.type) {
+        case "object": {
+            const obj = object as ObjectValue
+            if (member.computed && obj.native) throw throwError(new InterpreterError('Invalid native object key access'))
+            
+            const key = get_object_props(member)[0];
+            if (!key)
+                throw throwError(new InterpreterError('Invalid object key access: ' + member.property.kind));
+            
+            if(!obj.properties.has(key))
+                return MK_NULL()
+
+            return obj.properties.get(key)!
+        }
+            
+        case "list": {
+            if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access"));
+
+            const list = object as ListValue
+            let index = (evaluate(member.property, env) as NumberValue).value;
+
+            if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index"));
+
+            if (index < 0)
+                index = list.value.length + index
+
+            if (index < 0 || index >= list.value.length)
+                throw throwError(new InterpreterError(`Index out of range. Index must be between ${(-list.value.length)} and ${(list.value.length - 1)}`));
+
+            return list.value[index]
+        }
+            
+        default:
+            console.error("ERRORE, expressions:402")
+            break; 
+    }
+    
+    return MK_NULL()
+}
+/*export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
     const object: Expression = get_member_expression_variable(member);
     const props = get_object_props(member)
+    console.log(props)
+    console.log(object)
 
     const varname = (object as Identifier).symbol;
     const variable = env.lookupVar(varname);
@@ -393,7 +447,7 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
             if (member.computed && object.native) throw throwError(new InterpreterError("Invalid native object key access. Expected valid key (e.g. obj.key)"))    
         
             const key = props.pop()!
-            
+
             if (!key)
                 throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
             
@@ -424,7 +478,7 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
         default:
             return MK_NULL()
     }
-}
+}*/
 
 // Evaluates a call expression and returns its result
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {

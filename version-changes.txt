@@ -67,8 +67,6 @@ v2.0.1
   # Features
     -> Added integer division: 8 // 3 # 2
 
-== ^^ RELEASED ^^ ==
-
 v2.1.0
   # Features
     -> Built-In, Default and User-Made libraries: // Built-In libraries are already implemented in the code, Default's have to be imported
@@ -130,20 +128,41 @@ v2.2.0
   # Fixes:
     -> Fixed comparison operations between lists: Now comparing lists (==, !=) works as expected
 
+== ^^ RELEASED ^^ ==
+
 v2.2.1 
   # Features
-    -> Reactive Variables
+    -> Reactive Variables: 
+        let a = 5
+        let reactive b = a + 2
+        print(b) // 7
+        a = 3
+        print(b) // 5
+    -> 'unreactive' Function: 
+        let a = 5   
+        let reactive b = a + 2
+        print(b) // 7
+        unreactive(b)
+        a = 3
+        print(b) // 7 
+    -> Negative List Index Access:
+        let list = [1, 5, 3]
+        print(list[-2]) // 5
+    -> Control Flow Statements: Break, Continue, Pass 
   # Changes
     -> Parser now doesn't automatically start evaluating the program through the interpreter, but instead it returns it to the main file, which run the interpreter's evaluation itself. This way the gh3sp-extension can parse the code and not run it immediately
     -> Complete code revision & correction
     -> Complete code comments
   # Fixes
     -> Variable names can now contains digit characters [0-9] but not at the start of the name (e.g. var_1 --> yes, 1_var --> no)
-    -> Obj access with obj[value] or obj.value, with value as a non-existing key inside the object, now sets a new key inside the object: let obj = {"a": 2}    obj["b"] ??= 5 --> {"a": 2, "undefined": 5}
+    -> Obj access with obj["value"] or obj.value, with value as a non-existing key inside the object, now sets a new key inside the object: 
+        let obj = {"a": 2}    
+        obj["b"] ??= 5 
+        print(obj) // {"a": 2, "undefined": 5}
     -> Obj & List access/assignment/compound assignment now work properly
     -> Binary operations between negative numbers and variables now work properly
 
 vx.x.x
   # Features
-  
-  # TO-DO:
+  # Changes
+  # Fixes

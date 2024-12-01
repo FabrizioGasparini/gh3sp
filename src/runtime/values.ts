@@ -95,5 +95,23 @@ export interface FunctionValue extends RuntimeValue {
 // Reactive value
 export interface ReactiveValue extends RuntimeValue {
     type: "reactive";
-    value: Expression;
+    name: string;
+    node: Expression;
+    value: RuntimeValue;
+}
+
+
+// Loop Signals
+export type SignalType = "break" | "continue";
+
+export interface Signal {
+    type: SignalType;
+}
+
+export interface BreakSignal extends Signal {
+    type: "break";
+}
+
+export interface ContinueSignal extends Signal {
+    type: "continue";
 }
