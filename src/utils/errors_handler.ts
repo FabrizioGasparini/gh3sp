@@ -1,6 +1,6 @@
 import "node:process";
 import process from "node:process";
-import { TokenType } from "../frontend/lexer.ts";
+import { TokenType } from "../frontend/lexer";
 
 class Print {
     static RED = "\x1b[31m";
@@ -56,8 +56,8 @@ export class MathError extends Error {
 }
 
 export class ImportError extends Error {
-    constructor(error: string, path: string) {
-        super(`${error}: ${path}`);
+    constructor(error: string, path: string | null) {
+        super(path ? `${error}: ${path}` : `${error}`);
         this.name = "ImportError";
     }
 }

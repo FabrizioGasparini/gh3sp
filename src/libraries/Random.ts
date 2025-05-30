@@ -1,5 +1,5 @@
-import { MK_NUMBER, RuntimeValue, type FunctionCall } from "../runtime/values.ts";
-import { handleError } from "../utils/errors_handler.ts";
+import { MK_NUMBER, RuntimeValue, type FunctionCall } from "../runtime/values";
+import { handleError } from "../utils/errors_handler";
 
 
 function makeRandomNumber(min: number, max: number, precision: number = 1): number {
@@ -7,10 +7,10 @@ function makeRandomNumber(min: number, max: number, precision: number = 1): numb
 }
 
 const rand: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args.length != 2 && args.length != 3) throw handleError(new SyntaxError("Expected 2 or 3 argument, got " + args.length), line, column);
-    if (args[0].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number', got " + args[0].type), line, column);
-    if (args[1].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number', got " + args[1].type), line, column);
-    if (args.length == 3)if (args[2].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number', got " + args[2].type), line, column);
+    if (args.length != 2 && args.length != 3) throw handleError(new SyntaxError("Invalid number of arguments. Expected '2|3' argument but received " + args.length), line, column);
+    if (args[0].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number' but received " + args[0].type), line, column);
+    if (args[1].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number' but received " + args[1].type), line, column);
+    if (args.length == 3)if (args[2].type != "number") throw handleError(new SyntaxError("Invalid argument type. Expected 'number' but received " + args[2].type), line, column);
     
     const min = args[0].value;
     const max = args[1].value;
@@ -43,8 +43,8 @@ function countDecimalPlaces(num: number): number {
 
 
 const choose: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args.length != 1) throw handleError(new SyntaxError("Expected 1 argument, got " + args.length), line, column);
-    if (args[0].type != "list") throw handleError(new SyntaxError("Invalid argument type. Expected 'list', got " + args[0].type), line, column);
+    if (args.length != 1) throw handleError(new SyntaxError("Invalid number of arguments. Expected '1' argument but received " + args.length), line, column);
+    if (args[0].type != "list") throw handleError(new SyntaxError("Invalid argument type. Expected 'list' but received " + args[0].type), line, column);
 
     return args[0].value[makeRandomNumber(0, (args[0].value).length - 1)];
 }

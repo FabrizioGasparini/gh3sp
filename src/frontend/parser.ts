@@ -1,9 +1,9 @@
-import type Environment from "../runtime/environments.ts";
-import { compileLibrary } from "../runtime/libraries.ts";
-import { handleError, ParserError } from "../utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement } from "./ast.ts";
-import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
-import { tokenize, Token, TokenType } from "./lexer.ts";
+import type Environment from "../runtime/environments";
+import { compileLibrary } from "../runtime/libraries";
+import { handleError, ParserError, ImportError } from "../utils/errors_handler";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, type NullStatement } from "./ast";
+import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast";
+import { tokenize, Token, TokenType } from "./lexer";
 
 export default class Parser {
     // Declares a list of Tokens
@@ -59,13 +59,13 @@ export default class Parser {
     }
 
     // Returns the parsed program linked to all the imported libraries
-    public async produceAST(sourceCode: string) {
+    public async produceAST(sourceCode: string, env: Environment) {
         // Gets the token from the source code using the lexer 
         this.tokens = tokenize(sourceCode);
         
         // Imports all the libraries 
         while (this.at().type == TokenType.Import) {
-            await this.parse_import_statement()
+            await this.parse_import_statement(env)
             while (this.isEndOfLine()) this.skipNewLine();
         }
         
@@ -109,15 +109,14 @@ export default class Parser {
     private parse_statement(): Statement {
         if (this.isEndOfLine()) {
             this.skipNewLine();
+            if(!this.not_eof()) return { kind: "NullStatement" } as NullStatement;
             return this.parse_statement();
         }
 
         let stmt: Statement;
         switch (this.at().type) {
             case TokenType.Let:
-                stmt = this.parse_variable_declaration();
-                break;
-            case TokenType.Const:
+                case TokenType.Const:
                 stmt = this.parse_variable_declaration();
                 break;
                 
@@ -140,17 +139,18 @@ export default class Parser {
                 break;
             
             case TokenType.Break:
-                stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
-                break;
             case TokenType.Continue:
-                stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
-                break;
             case TokenType.Pass:
                 stmt = { kind: "ControlFlowStatement", value: this.eat().value } as ControlFlowStatement;
                 break;
             
             case TokenType.Import:
                 throw this.throwError(new ParserError("Libraries can only be imported at the start of the program."))
+        
+            case TokenType.Export:
+                stmt = this.parse_export_declaration()
+                break;
+        
         
             // If it's not a statement, parse an expression
             default:
@@ -221,6 +221,7 @@ export default class Parser {
             kind: "FunctionDeclaration",
             name,
             parameters,
+            expectedArgs: args.length,
             body,
             line: this.currentLine,
             column: this.currentColumn,
@@ -247,7 +248,7 @@ export default class Parser {
         const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
 
         // If the next token is a new line or the end of the file
-        if (this.isEndOfLine() || !this.not_eof()) {
+        if (this.isEndOfLine() || !this.not_eof() || this.at().type == TokenType.Comma) {
             // Throws an error if the variable is a constant
             if (isConstant) this.throwError(new SyntaxError(`Must assign value to constant expression '${assignee}'. No value provided.`));
 
@@ -447,7 +448,20 @@ export default class Parser {
             declared = true;
         } else if (this.at().type == TokenType.Const) this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a foreach loop.`));
 
-        const element = this.parse_statement();
+        const declaration = this.parse_statement();
+        let element;
+        let index;
+
+        if (declaration.kind == "Identifier") element = declaration;
+        else if (declaration.kind == "ListLiteral") {
+            if((declaration as ListLiteral).values.length != 2) this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
+            if((declaration as ListLiteral).values[0].kind != "Identifier") this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
+            if((declaration as ListLiteral).values[1].kind != "Identifier") this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
+            
+            element = (declaration as ListLiteral).values[0]
+            index = (declaration as ListLiteral).values[1]
+        }
+        else this.throwError(new SyntaxError(`Invalid foreach element. Expected an identifier`))
 
         this.expect(TokenType.In, "Expected 'in' following foreach assignment");
 
@@ -475,6 +489,7 @@ export default class Parser {
         return {
             kind: "ForEachStatement",
             element,
+            index,
             body,
             list,
             declared,
@@ -519,12 +534,36 @@ export default class Parser {
     }
 
     // Returns an import statement
-    private async parse_import_statement() {
+    private async parse_import_statement(env: Environment) {
         this.eat(); // Go past import keyword
         const path = this.expect(TokenType.String, "Expected 'string' following import keyword").value;
 
-        const library_objects = await compileLibrary(path);
+        if (this.env.imported.has(path)) throw this.throwError(new ImportError(`Cannot import library '${path}' (most likely due to a circular import)`, null));
+        const library_objects = await compileLibrary(path, env);
         for(const obj of library_objects) this.env.declareVar(obj.name, obj.object, true);
+    }
+
+    // Returns an export declaration
+    private parse_export_declaration(): Statement {
+        this.eat() // Go past export keyword
+        
+        switch (this.at().type) {
+            case TokenType.Const:
+            case TokenType.Let:
+                return {
+                    kind: "ExportDeclaration",
+                    declaration: this.parse_variable_declaration()
+                } as ExportDeclaration
+                
+            case TokenType.Fn:
+                return {
+                    kind: "ExportDeclaration",
+                    declaration: this.parse_function_declaration()
+                } as ExportDeclaration
+        
+            default:
+                throw this.throwError(new ParserError("Invalid export declaration. Only variables, constants and functions can be exported"))
+        }
     }
 
     // Order Of Operations (Expressions)
@@ -958,7 +997,7 @@ export default class Parser {
                     column: this.currentColumn,
                 } as StringLiteral;
             }
-
+                
             case TokenType.OpenParen: {
                 this.eat(); // Go past parenthesis
                 const value = this.parse_statement();

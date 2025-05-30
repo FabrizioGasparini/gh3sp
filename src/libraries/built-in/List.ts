@@ -1,7 +1,7 @@
-import Environment from "../../runtime/environments.ts";
-import { evaluate } from "../../runtime/interpreter.ts";
-import { type FunctionCall, type RuntimeValue, type ListValue, MK_NULL, MK_BOOL, type FunctionValue } from "../../runtime/values.ts";
-import { handleError } from "../../utils/errors_handler.ts";
+import Environment from "../../runtime/environments";
+import { evaluate } from "../../runtime/interpreter";
+import { type FunctionCall, type RuntimeValue, type ListValue, MK_NULL, MK_BOOL, type FunctionValue } from "../../runtime/values";
+import { handleError } from "../../utils/errors_handler";
 
 
 function throwError(error: string, line: number, column: number) {

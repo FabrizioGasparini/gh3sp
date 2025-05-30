@@ -1,4 +1,4 @@
-import { handleError, LexerError } from "../utils/errors_handler.ts";
+import { handleError, LexerError } from "../utils/errors_handler";
 
 export enum TokenType {
     // Literal Types
@@ -20,6 +20,7 @@ export enum TokenType {
     Continue,
     Pass,
     Import,
+    Export,
     Reactive,
 
     // Operators
@@ -77,6 +78,7 @@ const KEYWORDS: Record<string, TokenType> = {
     pass: TokenType.Pass,
 
     import: TokenType.Import,
+    export: TokenType.Export,
 
     reactive: TokenType.Reactive,
 };

@@ -1,5 +1,5 @@
-import { Statement, type Expression } from "../frontend/ast.ts";
-import Environment from "./environments.ts";
+import { Statement, type Expression } from "../frontend/ast";
+import Environment from "./environments";
 
 // List of types that every value can have
 export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "list" | "function" | "reactive";
@@ -88,6 +88,7 @@ export interface FunctionValue extends RuntimeValue {
     type: "function";
     name: string;
     parameters: string[];
+    expectedArgs: number;
     declarationEnv: Environment;
     body: Statement[];
 }

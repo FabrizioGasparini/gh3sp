@@ -1,4 +1,4 @@
-import { MK_BOOL, MK_NULL } from "../values.ts";
+import { MK_BOOL, MK_NULL } from "../values";
 
 // List of all the constants which are built-in in the 'gh3sp' language
 export const built_in_constants = [

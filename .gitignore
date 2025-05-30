@@ -6,6 +6,9 @@ gh3lib-builder
 gh3sp-lib
 gh3sp-ide
 gh3sp-ext
+gh3sp-installer
 test-libraries
 main.gh3
 out/
+.vscode
+debugger-temp

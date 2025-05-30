@@ -1,9 +1,9 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "../../frontend/ast.ts";
-import { InterpreterError, MathError } from "../../utils/errors_handler.ts";
-import Environment from "../environments.ts";
-import { evaluate, throwError } from "../interpreter.ts";
-import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values.ts";
-import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "../../frontend/ast";
+import { InterpreterError, MathError } from "../../utils/errors_handler";
+import Environment from "../environments";
+import { evaluate, throwError } from "../interpreter";
+import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values";
+import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values";
 
 // Evaluates a numeric expression between two given 'NumberValue's and an operator and returns its result
 function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
@@ -38,7 +38,7 @@ function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValu
 // Evaluates an expression between two given 'StringValue's and an operator and returns its result
 const evaluate_string_binary_expression = (left: StringValue, right: StringValue, operator: string): StringValue => (
     (operator == "+")
-        ? { value: left.value + right.value, type: "string" } as StringValue
+        ? { value: (left.value).toString() + (right.value).toString(), type: "string" } as StringValue
         : throwError(new InterpreterError("Invalid operation between strings: '" + operator + "'"))
 )
 
@@ -492,6 +492,8 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
     if (fn.type == "function") {
         const func = fn as FunctionValue;
         const scope = new Environment(func.declarationEnv);
+        
+        if (func.expectedArgs != 0 && func.expectedArgs != args.length) throw throwError(new InterpreterError("Invalid number of arguments. Expected " + func.expectedArgs + " but received " + args.length))
 
         for (let i = 0; i < func.parameters.length; i++) {
             const varname = func.parameters[i];

@@ -1,10 +1,10 @@
-import { AssignmentExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, VariableDeclaration, WhileStatement, type ControlFlowStatement, type ImportStatement } from "../../frontend/ast.ts";
-import { InterpreterError } from "../../utils/errors_handler.ts";
-import Environment from "../environments.ts";
-import { evaluate, throwError } from "../interpreter.ts";
-import { compileLibrary } from "../libraries.ts";
-import type { Signal } from "../values.ts";
-import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER, type ReactiveValue, type BreakSignal, type ContinueSignal  } from "../values.ts";
+import { AssignmentExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, VariableDeclaration, WhileStatement, type ControlFlowStatement, type ExportDeclaration, type ImportStatement } from "../../frontend/ast";
+import { InterpreterError } from "../../utils/errors_handler";
+import Environment from "../environments";
+import { evaluate, throwError } from "../interpreter";
+import { compileLibrary } from "../libraries";
+import type { Signal } from "../values";
+import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER, type ReactiveValue, type BreakSignal, type ContinueSignal  } from "../values";
 
 export const evaluate_program = (program: Program, env: Environment): RuntimeValue => (program.body.map(stmt => evaluate(stmt, env))[program.body.length - 1])
 
@@ -29,6 +29,7 @@ export function evaluate_function_declaration(declaration: FunctionDeclaration, 
         type: "function",
         name: declaration.name,
         parameters: declaration.parameters,
+        expectedArgs: declaration.expectedArgs,
         declarationEnv: env,
         body: declaration.body,
     } as FunctionValue;
@@ -182,6 +183,7 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
     const loop_env = new Environment(env);
     // If the loop variable is not already declare in the given environment, declares it the foreach statement's scope
     if (node.declared) loop_env.declareVar(node.element.symbol, MK_NULL(), false);
+    if (node.index) loop_env.declareVar(node.index.symbol, MK_NUMBER(0), false);
     
     // Loops through the list
     for (let i = 0; i < list.value.length; i++)
@@ -191,6 +193,7 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
 
         // Assigns the value of the current iterated element to the loop variable
         loop_env.assignVar(node.element.symbol, element);
+        if(node.index) loop_env.assignVar(node.index.symbol, MK_NUMBER(i));
         
         // Evaluates the foreach statement's body 
         try {
@@ -223,14 +226,17 @@ export function evaluate_import_statement(node: ImportStatement, env: Environmen
     if (env.parent) throw throwError(new InterpreterError("Cannot import libraries outside of the main scope"));
     
     // Compiles the library at the given path
-    compileLibrary(node.path)
+    compileLibrary(node.path, env)
 
     return MK_NULL()
 }
 
+// Evaluates break, continue and pass statements
 export function evaluate_control_flow_statement(node: ControlFlowStatement, env: Environment): RuntimeValue {
-    if(!env.inside_loop) throw throwError(new SyntaxError("Invalid 'break' outside loop"))
+    // Throws an error, if the given environment is not currently evaluating a loop
+    if (!env.inside_loop) throw throwError(new SyntaxError("Invalid 'break' outside loop"))
 
+    // Returns the necessary flow signal, given by the node value, by throwing it
     switch (node.value) {
         case "break":
             throw { type: "break" } as BreakSignal;
@@ -239,4 +245,23 @@ export function evaluate_control_flow_statement(node: ControlFlowStatement, env:
         case "pass":
             return MK_NULL()
     }
+}
+
+// Evaluates the exported variables and functions
+export function evaluate_export_declaration(node: ExportDeclaration, env: Environment): RuntimeValue {
+    let name: string = "";
+    switch (node.declaration.kind) {
+        case "VariableDeclaration":
+            name = ((node.declaration as VariableDeclaration).assignee as Identifier).symbol;
+            break
+    
+        case "FunctionDeclaration":
+            name = (node.declaration as FunctionDeclaration).name;
+            break
+    }
+    
+    evaluate(node.declaration, env)
+    env.exported.add(name);
+    
+    return MK_NULL()
 }

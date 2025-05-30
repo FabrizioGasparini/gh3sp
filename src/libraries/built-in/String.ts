@@ -1,6 +1,6 @@
-import { MK_STRING, RuntimeValue, type FunctionCall } from "../../runtime/values.ts";
-import { handleError } from "../../utils/errors_handler.ts";
-import { parse } from "../../runtime/built-in/functions.ts"
+import { MK_STRING, RuntimeValue, type FunctionCall } from "../../runtime/values";
+import { handleError } from "../../utils/errors_handler";
+import { parse } from "../../runtime/built-in/functions"
 
 const join: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     let string = ""

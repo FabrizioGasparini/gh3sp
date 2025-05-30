@@ -8,7 +8,9 @@ export type NodeType =
     | "ForEachStatement"
     | "WhileStatement"
     | "ImportStatement"
+    | "ExportDeclaration"
     | "ControlFlowStatement"
+    | "NullStatement"
 
     // Expressions
     | "AssignmentExpression"
@@ -52,6 +54,7 @@ export interface FunctionDeclaration extends Statement {
     kind: "FunctionDeclaration";
     parameters: string[];
     name: string;
+    expectedArgs: number;
     body: Statement[];
 }
 
@@ -74,6 +77,7 @@ export interface ForStatement extends Statement {
 export interface ForEachStatement extends Statement {
     kind: "ForEachStatement";
     element: Identifier;
+    index?: Identifier;
     declared: boolean;
     list: Identifier;
     body: Statement[];
@@ -90,9 +94,18 @@ export interface ImportStatement extends Statement {
     path: string;
 }
 
+export interface ExportDeclaration extends Statement {
+    kind: "ExportDeclaration";
+    declaration: Statement;
+}
+
 export interface ControlFlowStatement extends Expression {
     kind: "ControlFlowStatement";
     value: "break" | "continue" | "pass";
+}
+
+export interface NullStatement extends Expression {
+    kind: "NullStatement";
 }
 
 export interface Expression extends Statement {}

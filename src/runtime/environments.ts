@@ -1,9 +1,9 @@
-import { built_in_libraries } from "./built-in/libraries.ts";
-import { InterpreterError } from "../utils/errors_handler.ts";
-import { built_in_functions } from "./built-in/functions.ts";
-import { evaluate, throwError } from "./interpreter.ts";
-import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "./values.ts";
-import { built_in_constants } from "./built-in/constants.ts";
+import { built_in_libraries } from "./built-in/libraries";
+import { InterpreterError } from "../utils/errors_handler";
+import { built_in_functions } from "./built-in/functions";
+import { evaluate, throwError } from "./interpreter";
+import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "./values";
+import { built_in_constants } from "./built-in/constants";
 
 // Creates the global environment of the program
 export function createGlobalEnvironment() {
@@ -28,16 +28,28 @@ export default class Environment {
 
     // Map of the environment's declared variables
     private variables: Map<string, RuntimeValue>;
-    // Map of the environment's declared constants
+    // Set of the environment's declared constants names
     private constants: Set<string>;
+
+    // Set of the environment's exported variables and functions names
+    public exported: Set<string>;
+    // Set of the environment's imported modules names
+    public imported: Set<string>;
 
     constructor(parentENV?: Environment) {
         // Sets the env parent to the given env
         this.parent = parentENV;
+        
         // Initializes the variables map
         this.variables = new Map();
-        // Initializes the constants map
+        // Initializes the constants set
         this.constants = new Set();
+
+        // Initializes the exported set
+        this.exported = new Set();
+
+        // Initializes the exported set
+        this.imported = new Set();
 
         // Sets the max number of allowed iterations
         this.MAX_ITERATIONS = 222222;
@@ -83,6 +95,7 @@ export default class Environment {
 
         return variable;
     };
+
     // Returns the environment where the given variable is found
     public resolve(varname: string): Environment {
         // If the variable is in the current environment, returns the env

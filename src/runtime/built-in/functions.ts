@@ -1,8 +1,8 @@
-import { MK_BOOL, type FunctionCall, type ReactiveValue } from "../values.ts";
-import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values.ts";
-import { handleError } from "../../utils/errors_handler.ts";
-import * as readlineSync from "readline-sync.ts";
-import type Environment from "../environments.ts";
+import { MK_BOOL, type FunctionCall, type ReactiveValue } from "../values";
+import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values";
+import { handleError } from "../../utils/errors_handler";
+import * as readlineSync from "readline-sync";
+import type Environment from "../environments";
 
 const throwError = (error: Error, line: number, column: number) => { throw handleError(error, line, column) };
 
@@ -11,7 +11,7 @@ const time: FunctionCall = () => { return MK_NUMBER(Date.now()) };
 // Returns a string representation of the given argument
 export const str: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
+        throwError(SyntaxError("Invalid number of arguments. Expected '1' argument but received '" + args.length + "'"), line, column)
     
     return MK_STRING(parse(args[0]))
 };
@@ -19,10 +19,10 @@ export const str: FunctionCall = (args: RuntimeValue[], line: number, column: nu
 // Returns the integer value of the given argument
 const int: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
+        throwError(SyntaxError("Invalid number of arguments. Expected '1' argument but received '" + args.length + "'"), line, column)
     
     if (args[0].type != "string" && args[0].type != "number")
-        throwError(TypeError("Expected argument type 'string|number', got '" + args[0].type + "'"), line, column)
+        throwError(TypeError("Invalid argument type. Expected 'string|number' but received '" + args[0].type + "'"), line, column)
     
     return MK_NUMBER(parseInt(args[0].value))
 };
@@ -30,10 +30,10 @@ const int: FunctionCall = (args: RuntimeValue[], line: number, column: number) =
 // Returns the decimal value of the given argument
 const float: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
+        throwError(SyntaxError("Invalid number of arguments. Expected '1' argument but received '" + args.length + "'"), line, column)
     
     if (args[0].type != "string" && args[0].type != "number")
-        throwError(TypeError("Expected argument type 'string|number', got '" + args[0].type + "'"), line, column)
+        throwError(TypeError("Invalid argument type. Expected 'string|number' but received '" + args[0].type + "'"), line, column)
     
     return MK_NUMBER(parseFloat(args[0].value))
 };
@@ -51,7 +51,7 @@ const print: FunctionCall = (args: RuntimeValue[]) => {
 const input: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     let string = "";
     if (args.length > 0)
-        if (args[0].type != "string") throwError(TypeError("Expected argument type 'string', got '" + args[0].type + "'"), line, column);
+        if (args[0].type != "string") throwError(TypeError("Invalid argument type. Expected 'string' but received '" + args[0].type + "'"), line, column);
         else string = args[0].value;
         
 
@@ -158,7 +158,7 @@ function parse_list(list: ListValue) {
 // Returns the length of a given argument
 const length: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1)
-        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
+        throwError(SyntaxError("Invalid number of arguments. Expected '1' argument but received '" + args.length + "'"), line, column)
     
     return MK_NUMBER(get_length(args[0], line, column));
 };
@@ -183,10 +183,10 @@ function get_length(node: RuntimeValue, line: number, column: number) {
 
 const unreactive: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
     if (args.length != 1)
-        throwError(SyntaxError("Expected '1' argument, got '" + args.length + "'"), line, column)
+        throwError(SyntaxError("Invalid number of arguments. Expected '1' argument but received '" + args.length + "'"), line, column)
 
     if (args[0].type != "reactive")
-        throwError(TypeError("Expected argument type 'reactive', got '" + args[0].type + "'"), line, column)
+        throwError(TypeError("Invalid argument type. Expected 'reactive' but received '" + args[0].type + "'"), line, column)
 
     const reactive = args[0] as ReactiveValue
 
