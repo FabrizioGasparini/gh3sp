@@ -5,7 +5,7 @@
     "outDir": "dist",             
     "rootDir": "./src",
     "esModuleInterop": true,         
-    "skipLibCheck": true,
+    "skipLibCheck": true
   },
   "include": ["**/*.ts"],           
   "exclude": ["node_modules", "libraries", "gh3sp-lib", "test-libraries", "gh3sp-ide", "debugger-temp"]       

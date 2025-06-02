@@ -1,5 +1,5 @@
-import { MK_NUMBER, RuntimeValue, type FunctionCall } from "../runtime/values";
-import { handleError } from "../utils/errors_handler";
+import { MK_NUMBER, RuntimeValue, type FunctionCall } from "../runtime/values.ts";
+import { handleError } from "../utils/errors_handler.ts";
 
 
 function makeRandomNumber(min: number, max: number, precision: number = 1): number {

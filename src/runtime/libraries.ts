@@ -1,11 +1,11 @@
-import { handleError, ImportError } from "../utils/errors_handler";
-import { MK_NATIVE_FUNCTION, MK_OBJECT, type FunctionCall, type RuntimeValue } from "./values";
-import { default_libraries } from "./built-in/libraries";
+import { handleError, ImportError } from "../utils/errors_handler.ts";
+import { MK_NATIVE_FUNCTION, MK_OBJECT, type FunctionCall, type RuntimeValue } from "./values.ts";
+import { default_libraries } from "./built-in/libraries.ts";
 import process from "node:process";
 import { readFileSync } from "node:fs";
-import Environment, { createGlobalEnvironment } from "./environments";
-import Parser from "../frontend/parser";
-import { evaluate } from "./interpreter";
+import Environment, { createGlobalEnvironment } from "./environments.ts";
+import Parser from "../frontend/parser.ts";
+import { evaluate } from "./interpreter.ts";
 import { existsSync } from "node:fs";
 
 // Library Object Type

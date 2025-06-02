@@ -1,9 +1,9 @@
-import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL, MK_NULL } from "./values";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration } from "../frontend/ast";
-import Environment from "./environments";
-import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression, evaluate_ternary_expression } from "./evaluation/expressions";
-import { evaluate_control_flow_statement, evaluate_export_declaration, evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements";
-import { handleError, InterpreterError } from "../utils/errors_handler";
+import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL, MK_NULL } from "./values.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, MembershipExpression, ChooseStatement, ChooseExpression } from "../frontend/ast.ts";
+import Environment from "./environments.ts";
+import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression, evaluate_ternary_expression, evaluate_membership_expression, evaluate_choose_expression } from "./evaluation/expressions.ts";
+import { evaluate_choose_statement, evaluate_control_flow_statement, evaluate_export_declaration, evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "./evaluation/statements.ts";
+import { handleError, InterpreterError } from "../utils/errors_handler.ts";
 
 // Declares current line & column, useful for errors handling
 let currentLine: number = 0;
@@ -56,6 +56,9 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         case "BinaryExpression":
             return evaluate_binary_expression(astNode as BinaryExpression, env);
 
+        case "MembershipExpression":
+            return evaluate_membership_expression(astNode as MembershipExpression, env);
+
         case "LogicalExpression":
             return evaluate_logical_expression(astNode as LogicalExpression, env);
 
@@ -74,6 +77,9 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         case "TernaryExpression":
             return evaluate_ternary_expression(astNode as TernaryExpression, env);
         
+        case "ChooseExpression":
+            return evaluate_choose_expression(astNode as ChooseExpression, env);
+        
         
         case "IfStatement":
             return evaluate_if_statement(astNode as IfStatement, env);
@@ -89,6 +95,9 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         
         case "ControlFlowStatement":
             return evaluate_control_flow_statement(astNode as ControlFlowStatement, env);
+        
+        case "ChooseStatement":
+            return evaluate_choose_statement(astNode as ChooseStatement, env);
         
         
         case "ExportDeclaration":

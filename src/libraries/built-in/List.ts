@@ -1,7 +1,7 @@
-import Environment from "../../runtime/environments";
-import { evaluate } from "../../runtime/interpreter";
-import { type FunctionCall, type RuntimeValue, type ListValue, MK_NULL, MK_BOOL, type FunctionValue } from "../../runtime/values";
-import { handleError } from "../../utils/errors_handler";
+import Environment from "../../runtime/environments.ts";
+import { evaluate } from "../../runtime/interpreter.ts";
+import { type FunctionCall, type RuntimeValue, type ListValue, MK_NULL, MK_BOOL, type FunctionValue } from "../../runtime/values.ts";
+import { handleError } from "../../utils/errors_handler.ts";
 
 
 function throwError(error: string, line: number, column: number) {
@@ -150,7 +150,8 @@ const map: FunctionCall = (args: RuntimeValue[], line: number, column: number, e
         const value = list.value[i];
         scope.assignVar(varname, value);
 
-        values.push(evaluate(fn.body[0], scope).value);
+        const result: RuntimeValue = evaluate(fn.body[0], scope)
+        values.push(result ? result.value : list.value[i]); // If the function returns null, keep the original value
     }
 
     return {

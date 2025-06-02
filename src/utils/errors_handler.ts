@@ -1,6 +1,6 @@
 import "node:process";
 import process from "node:process";
-import { TokenType } from "../frontend/lexer";
+import { TokenType } from "../frontend/lexer.ts";
 
 class Print {
     static RED = "\x1b[31m";

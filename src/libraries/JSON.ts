@@ -1,11 +1,11 @@
-import { MK_OBJECT, type ObjectValue } from "../runtime/values";
-import { MK_STRING } from "../runtime/values";
-import { RuntimeValue, type FunctionCall } from "../runtime/values";
-import { handleError } from "../utils/errors_handler";
-import { parse_object } from "../runtime/built-in/functions";
-import type { StringValue } from "../runtime/values";
-import type { NumberValue } from "../runtime/values";
-import type { BoolValue } from "../runtime/values";
+import { MK_OBJECT, type ObjectValue } from "../runtime/values.ts";
+import { MK_STRING } from "../runtime/values.ts";
+import { RuntimeValue, type FunctionCall } from "../runtime/values.ts";
+import { handleError } from "../utils/errors_handler.ts";
+import { parse_object } from "../runtime/built-in/functions.ts";
+import type { StringValue } from "../runtime/values.ts";
+import type { NumberValue } from "../runtime/values.ts";
+import type { BoolValue } from "../runtime/values.ts";
 
 
 function obj_to_properties(obj: object, line: number, column: number): Map<string, RuntimeValue> {

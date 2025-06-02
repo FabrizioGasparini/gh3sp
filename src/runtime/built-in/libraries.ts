@@ -1,10 +1,10 @@
-import GMath from "../../libraries/GMath";
-import { type FunctionCall, type RuntimeValue, MK_NATIVE_FUNCTION } from "../values";
-import { MK_OBJECT } from "../values";
-import Random from "../../libraries/Random";
-import List from "../../libraries/built-in/List";
-import String from "../../libraries/built-in/String";
-import JSON from "../../libraries/JSON";
+import GMath from "../../libraries/GMath.ts";
+import { type FunctionCall, type RuntimeValue, MK_NATIVE_FUNCTION } from "../values.ts";
+import { MK_OBJECT } from "../values.ts";
+import Random from "../../libraries/Random.ts";
+import List from "../../libraries/built-in/List.ts";
+import String from "../../libraries/built-in/String.ts";
+import JSON from "../../libraries/JSON.ts";
 
 // List of all the libraries which are 'default', so the just need to be imported to be used
 export const default_libraries = { GMath, Random, JSON };

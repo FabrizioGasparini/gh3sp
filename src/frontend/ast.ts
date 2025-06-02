@@ -10,16 +10,19 @@ export type NodeType =
     | "ImportStatement"
     | "ExportDeclaration"
     | "ControlFlowStatement"
+    | "ChooseStatement"
     | "NullStatement"
 
     // Expressions
     | "AssignmentExpression"
     | "CompoundAssignmentExpression"
     | "BinaryExpression"
+    | "MembershipExpression"
     | "LogicalExpression"
     | "TernaryExpression"
     | "MemberExpression"
     | "CallExpression"
+    | "ChooseExpression"
 
     // Literals
     | "Identifier"
@@ -76,10 +79,9 @@ export interface ForStatement extends Statement {
 
 export interface ForEachStatement extends Statement {
     kind: "ForEachStatement";
-    element: Identifier;
-    index?: Identifier;
-    declared: boolean;
-    list: Identifier;
+    element: Identifier | VariableDeclaration;
+    index?: Identifier | VariableDeclaration;
+    list: Identifier | ListLiteral;
     body: Statement[];
 }
 
@@ -102,6 +104,20 @@ export interface ExportDeclaration extends Statement {
 export interface ControlFlowStatement extends Expression {
     kind: "ControlFlowStatement";
     value: "break" | "continue" | "pass";
+}
+
+export interface ChooseCase {
+    conditions: Expression[] | null; // null means default case
+    body: Statement[] | Expression;
+}
+
+export interface ChooseStatement extends Statement {
+    kind: "ChooseStatement";
+    subject: Expression;
+    cases: ChooseCase[];
+    tempVariable?: Identifier; // Optional temporary variable for the subject
+    chooseAll: boolean; // If true, all cases are evaluated
+    defaultCase?: ChooseCase;
 }
 
 export interface NullStatement extends Expression {
@@ -131,6 +147,13 @@ export interface BinaryExpression extends Expression {
     operator: string;
 }
 
+export interface MembershipExpression extends Expression {
+    kind: "MembershipExpression";
+    left: Expression;
+    right: Expression;
+    not: boolean;
+}
+
 export interface LogicalExpression extends Expression {
     kind: "LogicalExpression";
     left: Expression;
@@ -156,6 +179,15 @@ export interface CallExpression extends Expression {
     kind: "CallExpression";
     args: Expression[];
     caller: Expression;
+}
+
+export interface ChooseExpression extends Expression {
+    kind: "ChooseExpression";
+    subject: Expression;
+    tempVariable?: Identifier; // Optional temporary variable for the subject
+    cases: ChooseCase[];
+    chooseAll: boolean; // If true, all cases are evaluated
+    defaultCase?: ChooseCase;
 }
 
 export interface Identifier extends Expression {

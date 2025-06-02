@@ -1,9 +1,9 @@
-import type Environment from "../runtime/environments";
-import { compileLibrary } from "../runtime/libraries";
-import { handleError, ParserError, ImportError } from "../utils/errors_handler";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, type NullStatement } from "./ast";
-import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast";
-import { tokenize, Token, TokenType } from "./lexer";
+import type Environment from "../runtime/environments.ts";
+import { compileLibrary } from "../runtime/libraries.ts";
+import { handleError, ParserError, ImportError } from "../utils/errors_handler.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, type NullStatement, MembershipExpression, ChooseCase, type ChooseStatement, ChooseExpression } from "./ast.ts";
+import { Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "./ast.ts";
+import { tokenize, Token, TokenType } from "./lexer.ts";
 
 export default class Parser {
     // Declares a list of Tokens
@@ -113,7 +113,7 @@ export default class Parser {
             return this.parse_statement();
         }
 
-        let stmt: Statement;
+        let stmt: Statement = { kind: "NullStatement" } as NullStatement;
         switch (this.at().type) {
             case TokenType.Let:
                 case TokenType.Const:
@@ -136,6 +136,13 @@ export default class Parser {
                 break;
             case TokenType.ForEach:
                 stmt = this.parse_foreach_statement();
+                break;
+            
+            case TokenType.Choose:
+            case TokenType.ChooseAll:
+                if (this.isDeclaring) return this.parse_choose_expression();
+                
+                stmt = this.parse_choose_statement();
                 break;
             
             case TokenType.Break:
@@ -298,7 +305,7 @@ export default class Parser {
         this.expect(TokenType.OpenParen, "Expected '(' following 'if' keyword");
 
         // Parses the if condition
-        const condition = this.parse_expression();        
+        const condition = this.parse_expression();     
         // Throws an error if the condition is not found
         if(!condition) throw this.throwError(new SyntaxError("Expected a valid condition for the 'if' statement"));
         
@@ -386,18 +393,15 @@ export default class Parser {
         
         this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
         
-        let assignment: Statement;
-        let declared: boolean;
-        if (this.at().type == TokenType.Let) {
-            assignment = this.parse_variable_declaration();
-            declared = true;
-        } else if (this.at().type == TokenType.Const) {
-            this.eat();
-            throw this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a for loop.`));
-        } else {
-            assignment = this.parse_assignment_expression();
-            declared = false;
-        }
+        const declarationToken = this.eat()
+        if(declarationToken.type == TokenType.Const) this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a for loop.`));
+        
+        const assignment: Statement = declarationToken.type == TokenType.Let
+            ? this.parse_variable_declaration()
+            : this.parse_assignment_expression();
+        
+        const declared: boolean = declarationToken.type == TokenType.Let
+
         
         this.expect(TokenType.Semicolon, "Expected ';' following for assignment");
         const condition = this.parse_expression();
@@ -441,27 +445,103 @@ export default class Parser {
         this.eat(); // Go past foreach keyword
 
         this.expect(TokenType.OpenParen, "Expected '(' following for keyword");
-
-        let declared: boolean = false;
-        if (this.at().type == TokenType.Let) {
-            this.eat();
-            declared = true;
-        } else if (this.at().type == TokenType.Const) this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a foreach loop.`));
-
-        const declaration = this.parse_statement();
+        
         let element;
         let index;
+        
+        const loopTypeToken = this.eat() // This tokens indicate the type of element/index declaration to be parsed ('let elem', 'elem', '[elem, index]', '[let elem, index]', '[elem, let index]', '[let elem, let index]')
+        
+        if (loopTypeToken.type == TokenType.Const) this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a foreach loop.`));
+        else if (loopTypeToken.type == TokenType.OpenBracket)
+        {
+            switch (this.at().type) {
+                case TokenType.Const:
+                    this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a for loop.`));
+                    break;
+                
+                case TokenType.Identifier:
+                    element = { kind: "Identifier", symbol: this.eat().value, line: this.currentLine, column: this.currentColumn  } as Identifier;
+                    break;
+                    
+                case TokenType.Let: {
+                    this.eat()
+                    
+                    const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
+                    const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
 
-        if (declaration.kind == "Identifier") element = declaration;
-        else if (declaration.kind == "ListLiteral") {
-            if((declaration as ListLiteral).values.length != 2) this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
-            if((declaration as ListLiteral).values[0].kind != "Identifier") this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
-            if((declaration as ListLiteral).values[1].kind != "Identifier") this.throwError(new SyntaxError("Invalid foreach element and index. Expected 2 identifiers"))
-            
-            element = (declaration as ListLiteral).values[0]
-            index = (declaration as ListLiteral).values[1]
+                    element = {
+                        kind: "VariableDeclaration",
+                        assignee,
+                        constant: false,
+                        line: this.currentLine,
+                        column: this.currentColumn,
+                        negative: false,
+                        reactive: false
+                    } as VariableDeclaration;
+    
+                    break;
+                }
+                        
+                default:
+                   break;
+            }
+                                    
+            this.expect(TokenType.Comma, "Expected ',' following foreach element declaration");
+
+            switch (this.at().type) {
+                case TokenType.Const:
+                    this.throwError(new SyntaxError(`Cannot reassign constant variable '${this.at().value}' inside a for loop.`));
+                    break;
+                
+                case TokenType.Identifier:
+                    index = { kind: "Identifier", symbol: this.eat().value, line: this.currentLine, column: this.currentColumn  } as Identifier;
+                    break;
+                    
+                case TokenType.Let: {
+                    this.eat()
+                    
+                    const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
+                    const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
+
+                    index = {
+                        kind: "VariableDeclaration",
+                        assignee,
+                        constant: false,
+                        line: this.currentLine,
+                        column: this.currentColumn,
+                        negative: false,
+                        reactive: false
+                    } as VariableDeclaration;
+    
+                    break;
+                }
+                    
+                default:
+                   break;
+            }
+                         
+            this.expect(TokenType.CloseBracket, "Expected ']' following foreach index declaration");
         }
-        else this.throwError(new SyntaxError(`Invalid foreach element. Expected an identifier`))
+        else if(loopTypeToken.type == TokenType.Let)
+        {        
+            const identifier = this.expect(TokenType.Identifier, "Expected identifier name following let/const keywords").value;
+            const assignee = { kind: "Identifier", symbol: identifier, line: this.currentLine, column: this.currentColumn } as Identifier;
+
+            element = {
+                kind: "VariableDeclaration",
+                assignee,
+                constant: false,
+                line: this.currentLine,
+                column: this.currentColumn,
+                negative: false,
+                reactive: false
+            } as VariableDeclaration;
+        }
+        else if (loopTypeToken.type == TokenType.Identifier) {
+            element = { kind: "Identifier", symbol: loopTypeToken.value, line: this.currentLine, column: this.currentColumn  } as Identifier;
+        }
+        else this.throwError(new SyntaxError("Expected 'let', identifier or '[element, index]' following foreach keyword"));
+
 
         this.expect(TokenType.In, "Expected 'in' following foreach assignment");
 
@@ -492,7 +572,6 @@ export default class Parser {
             index,
             body,
             list,
-            declared,
             line: this.currentLine,
             column: this.currentColumn,
         } as ForEachStatement;
@@ -566,6 +645,99 @@ export default class Parser {
         }
     }
 
+    private parse_choose_statement(): Statement {
+        const chooseMode = this.eat().type; // Go past choose keyword
+
+        const subject = this.parse_expression();
+
+        let tempVariable: Identifier | undefined;
+        if (this.at().type == TokenType.ArrowOperator) {
+            this.eat(); // Go past =>
+            tempVariable = {kind: "Identifier", symbol: this.expect(TokenType.Identifier, "Expected identifier following '=>' in choose statement").value, line: this.currentLine, column: this.currentColumn} as Identifier;
+        }
+
+        this.expect(TokenType.OpenBrace, "Expected '{' following choose subject");
+
+        let defaultCase: ChooseCase | undefined;
+        const cases: ChooseCase[] = [];
+        while (this.at().type != TokenType.CloseBrace) {
+            while (this.isEndOfLine()) this.skipNewLine();
+
+            if (this.at().type == TokenType.CloseBrace) break;
+
+            if (this.at().type == TokenType.Case) {
+                this.eat(); // Go past case keyword
+
+                const conditions: Expression[] = [];
+                while (this.at().type != TokenType.Colon) {
+                    if (this.at().type == TokenType.Comma) {
+                        this.eat(); // Go past comma
+                        continue;
+                    }
+
+                    if (this.at().type == TokenType.Colon) break;
+                    
+                    conditions.push(this.parse_expression());
+                }
+                if (conditions.length == 0) throw this.throwError(new ParserError("Expected at least one condition following 'case' keyword"));
+
+                
+                this.expect(TokenType.Colon, "Expected ':' following case condition");
+                const body: Statement[] = [];
+
+                while (this.at().type != TokenType.Case && this.at().type != TokenType.DefaultCase && this.at().type != TokenType.CloseBrace) {
+                    while (this.isEndOfLine()) this.skipNewLine();
+
+                    if (this.at().type == TokenType.Case || this.at().type == TokenType.DefaultCase || this.at().type == TokenType.CloseBrace) break;
+
+                    body.push(this.parse_statement());
+                }
+
+                cases.push({
+                    conditions,
+                    body,
+                } as ChooseCase);
+            }
+            else if (this.at().type == TokenType.DefaultCase) {
+                if (defaultCase) throw this.throwError(new ParserError("Only one default case is allowed in a choose statement"));
+
+                this.eat(); // Go past default keyword
+
+                this.expect(TokenType.Colon, "Expected ':' following default case");
+                const body: Statement[] = [];
+
+                while (this.at().type != TokenType.Case && this.at().type != TokenType.DefaultCase && this.at().type != TokenType.CloseBrace) {
+                    while (this.isEndOfLine()) this.skipNewLine();
+
+                    if (this.at().type == TokenType.Case || this.at().type == TokenType.DefaultCase || this.at().type == TokenType.CloseBrace) break;
+
+                    body.push(this.parse_statement());
+                }
+
+                defaultCase = {
+                    conditions: null,
+                    body,
+                } as ChooseCase;
+            }
+            else {
+                throw this.throwError(new ParserError("Expected 'case' or 'default' following choose subject"));
+            }
+        }
+
+        this.expect(TokenType.CloseBrace, "Expected '}' following choose cases");
+
+        return {
+            kind: "ChooseStatement",
+            subject,
+            cases,
+            defaultCase,
+            tempVariable,
+            chooseAll: chooseMode == TokenType.ChooseAll,
+            line: this.currentLine,
+            column: this.currentColumn,
+        } as ChooseStatement;
+    }
+
     // Order Of Operations (Expressions)
     // ===================
     // Compound Assignment Expression
@@ -574,8 +746,10 @@ export default class Parser {
     // Logical OR Expression
     // Nullish Coalescing Expression
     // Ternary Expression
+    // Choose Expression
     // Equality Expression
     // Object Expression
+    // Membership Expression
     // Additive Expression
     // Multiplicative Expression
     // Exponential Expression
@@ -677,15 +851,15 @@ export default class Parser {
     
     // Returns a logical NOT expression
     private parse_logical_not_expression(): Expression {
-        if (this.at().type == TokenType.LogicOperator && this.at().value == "!") {
-            const operator = this.eat().value;
+        if ((this.at().type == TokenType.LogicOperator && this.at().value == "!") || this.at().type == TokenType.Not) {
+            this.eat().value; // Go past ! or not operator
             const right = this.parse_nullish_coalescing_expression();
 
             return {
                 kind: "LogicalExpression",
                 left: {"kind": "BooleanLiteral", "value": true},
                 right: right,
-                operator,
+                operator: "!",
                 line: this.currentLine,
                 column: this.currentColumn,
             } as LogicalExpression;
@@ -718,16 +892,16 @@ export default class Parser {
         
     // Returns a ternary expression
     private parse_ternary_expression(): Expression {        
-        const condition = this.parse_equality_expression();
+        const condition = this.parse_choose_expression();
 
         if (this.at().type == TokenType.QuestionMark)
         {
             this.eat() // Go past ?
-            const left = this.parse_equality_expression()
+            const left = this.parse_choose_expression()
 
             this.expect(TokenType.Colon, "Expected ':' between ternary expressions values")
 
-            const right = this.parse_equality_expression()
+            const right = this.parse_choose_expression()
 
             return {
                 kind: "TernaryExpression",
@@ -740,6 +914,86 @@ export default class Parser {
         }
 
         return condition;
+    }
+
+    // Returns a choose expression
+    private parse_choose_expression(): Expression {
+        if (this.at().type != TokenType.Choose && this.at().type != TokenType.ChooseAll) return this.parse_equality_expression();
+        const chooseMode = this.eat().type; // Go past choose keyword
+
+        const subject = this.parse_expression();
+        
+        let tempVariable: Identifier | undefined;
+        if (this.at().type == TokenType.Colon) {
+            this.eat(); // Go past :
+            tempVariable = {kind: "Identifier", symbol: this.expect(TokenType.Identifier, "Expected identifier following '=>' in choose statement").value, line: this.currentLine, column: this.currentColumn} as Identifier;
+        }
+
+        this.expect(TokenType.OpenBrace, "Expected '{' following choose subject");
+
+        let defaultCase: ChooseCase | undefined;
+        const cases: ChooseCase[] = [];
+        while (this.at().type != TokenType.CloseBrace) {
+            while (this.isEndOfLine()) this.skipNewLine();
+
+            if (this.at().type == TokenType.CloseBrace) break;
+
+            if (this.at().type == TokenType.Case) {
+                this.eat(); // Go past case keyword
+
+                const conditions: Expression[] = [];
+                while (this.at().type != TokenType.Colon) {
+                    if (this.at().type == TokenType.Comma) {
+                        this.eat(); // Go past comma
+                        continue;
+                    }
+
+                    if (this.at().type == TokenType.Colon) break;
+                    
+                    conditions.push(this.parse_expression());
+                }
+                if (conditions.length == 0) throw this.throwError(new ParserError("Expected at least one condition following 'case' keyword"));
+
+                this.expect(TokenType.Colon, "Expected ':' following case condition");
+                const body: Expression = this.parse_expression();
+                if (!body) throw this.throwError(new ParserError("Expected a valid expression following 'case' keyword"));
+
+                cases.push({
+                    conditions,
+                    body,
+                } as ChooseCase);
+            }
+            else if (this.at().type == TokenType.DefaultCase) {
+                if (defaultCase) throw this.throwError(new ParserError("Only one default case is allowed in a choose statement"));
+
+                this.eat(); // Go past default keyword
+
+                this.expect(TokenType.Colon, "Expected ':' following default case");
+                const body: Expression = this.parse_expression();
+                if (!body) throw this.throwError(new ParserError("Expected a valid expression following 'default' keyword"));
+
+                defaultCase = {
+                    conditions: null,
+                    body,
+                } as ChooseCase;
+            }
+            else {
+                throw this.throwError(new ParserError("Expected 'case' or 'default' following choose subject"));
+            }
+        }
+
+        this.expect(TokenType.CloseBrace, "Expected '}' following choose cases");
+
+        return {
+            kind: "ChooseExpression",
+            subject,
+            cases,
+            defaultCase,
+            tempVariable,
+            chooseAll: chooseMode == TokenType.ChooseAll,
+            line: this.currentLine,
+            column: this.currentColumn,
+        } as ChooseExpression;
     }
 
     // Returns an equality expression
@@ -806,7 +1060,7 @@ export default class Parser {
 
     // Returns a list expression
     private parse_list_expression(): Expression {
-        if (this.at().type != TokenType.OpenBracket) return this.parse_additive_expression();
+        if (this.at().type != TokenType.OpenBracket) return this.parse_membership_expression();
 
         this.eat(); // Go past [
 
@@ -834,6 +1088,29 @@ export default class Parser {
             line: this.currentLine,
             column: this.currentColumn,
         } as ListLiteral;
+    }
+
+    // Returns an in binary expression
+    private parse_membership_expression(): Expression {
+        let left = this.parse_additive_expression();
+
+        const not = this.at().type == TokenType.Not; // Check if the next token is a 'not' operator
+        if (not) this.eat(); // Go past not operator
+        
+        while (this.at().type == TokenType.In) {
+            this.eat().value;
+            const right = this.parse_additive_expression();
+            left = {
+                kind: "MembershipExpression",
+                left,
+                right,
+                not,
+                line: this.currentLine,
+                column: this.currentColumn,
+            } as MembershipExpression;
+        }
+
+        return left;
     }
 
     // Returns an additive expression
@@ -951,7 +1228,7 @@ export default class Parser {
 
             const computed = operator.type == TokenType.OpenBracket;
             const property = this.parse_primary_expression();
-
+            
             if (computed) this.expect(TokenType.CloseBracket, "Missing closing bracket in computed value");
             else if (property.kind != "Identifier") this.throwError(new SyntaxError("Cannot use dot operator without an identifier on the right"))
 

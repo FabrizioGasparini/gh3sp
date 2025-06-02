@@ -7,10 +7,11 @@
         "gh3sp": "./dist/gh3sp.js"
     },
     "scripts": {
-        "build": "node prebuild.js && tsc && pkg . && node postbuild.js",
+        "build": "node prebuild.js && tsc && pkg . && node postbuild.js && cloc --by-file .\\src",
         "start": "electron-forge start",
         "package": "electron-forge package",
-        "make": "electron-forge make"
+        "make": "electron-forge make",
+        "cloc": "cloc --by-file .\\src"
     },
     "keywords": [],
     "author": "gaspa",

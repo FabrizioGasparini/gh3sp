@@ -155,11 +155,20 @@ Questa roadmap descrive lo sviluppo e l'evoluzione del linguaggio di programmazi
 
 ---
 
+## v2.3.0 (2 Giugno 2025)
+### Aggiunte:
+- Espressioni di appartenenza: `x in list|object|string`.
+- Operatore 'not'
+- Costrutti 'choose' e 'chooseall'
+### Correzioni:
+- Nella mappature delle liste, se la funzione mappatrice restituisce 'null', ora il valore di ritorno sarà di default il valore originale invece di restituire un errore
+
+---
+
 # ⏳ Prossime Versioni
 
-## v2.3.0
+## v2.3.1
 ### Aggiunte:
-- Classi
 
 ---
 

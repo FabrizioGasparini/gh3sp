@@ -1,5 +1,5 @@
-import { Statement, type Expression } from "../frontend/ast";
-import Environment from "./environments";
+import { Statement, type Expression } from "../frontend/ast.ts";
+import Environment from "./environments.ts";
 
 // List of types that every value can have
 export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "list" | "function" | "reactive";
@@ -67,6 +67,11 @@ export interface ListValue extends RuntimeValue {
     type: "list";
     value: RuntimeValue[];
     name?: string;
+}
+
+// Returns a list value from a given array of runtime values
+export function MK_LIST(values: RuntimeValue[]) {
+    return { type: "list", value: values } as ListValue;
 }
 
 // Function Call

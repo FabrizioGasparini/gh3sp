@@ -1,4 +1,4 @@
-import { handleError, LexerError } from "../utils/errors_handler";
+import { handleError, LexerError } from "../utils/errors_handler.ts";
 
 export enum TokenType {
     // Literal Types
@@ -16,11 +16,22 @@ export enum TokenType {
     While,
     ForEach,
     In,
+    Not,
+    Choose,
+    ChooseAll,
+    Case,
+    DefaultCase,
+
+    // Control Flow
     Break,
     Continue,
     Pass,
+
+    // Declarations
     Import,
     Export,
+
+    // Special Keywords
     Reactive,
 
     // Operators
@@ -72,6 +83,11 @@ const KEYWORDS: Record<string, TokenType> = {
     while: TokenType.While,
     foreach: TokenType.ForEach,
     in: TokenType.In,
+    not: TokenType.Not,
+    choose: TokenType.Choose,
+    chooseall: TokenType.ChooseAll,
+    case: TokenType.Case,
+    default: TokenType.DefaultCase,
 
     break: TokenType.Break,
     continue: TokenType.Continue,

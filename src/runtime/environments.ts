@@ -1,9 +1,9 @@
-import { built_in_libraries } from "./built-in/libraries";
-import { InterpreterError } from "../utils/errors_handler";
-import { built_in_functions } from "./built-in/functions";
-import { evaluate, throwError } from "./interpreter";
-import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "./values";
-import { built_in_constants } from "./built-in/constants";
+import { built_in_libraries } from "./built-in/libraries.ts";
+import { InterpreterError } from "../utils/errors_handler.ts";
+import { built_in_functions } from "./built-in/functions.ts";
+import { evaluate, throwError } from "./interpreter.ts";
+import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "./values.ts";
+import { built_in_constants } from "./built-in/constants.ts";
 
 // Creates the global environment of the program
 export function createGlobalEnvironment() {

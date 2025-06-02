@@ -1,5 +1,5 @@
-import { MK_NUMBER, RuntimeValue, type FunctionCall, MK_STRING } from "../runtime/values";
-import { handleError, MathError } from "../utils/errors_handler";
+import { MK_NUMBER, RuntimeValue, type FunctionCall, MK_STRING } from "../runtime/values.ts";
+import { handleError, MathError } from "../utils/errors_handler.ts";
 
 const sqrt: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
     if (args.length != 1) throw handleError(new SyntaxError("Invalid number of arguments. Expected '1' argument but received " + args.length), line, column);

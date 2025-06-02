@@ -1,9 +1,10 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "../../frontend/ast";
-import { InterpreterError, MathError } from "../../utils/errors_handler";
-import Environment from "../environments";
-import { evaluate, throwError } from "../interpreter";
-import { BoolValue, FunctionValue, ListValue, MK_BOOL, StringValue } from "../values";
-import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values";
+import { AssignmentExpression, BinaryExpression, CallExpression, ChooseExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, MembershipExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "../../frontend/ast.ts";
+import { InterpreterError, MathError } from "../../utils/errors_handler.ts";
+import Environment from "../environments.ts";
+import { evaluate, throwError } from "../interpreter.ts";
+import { BoolValue, FunctionValue, ListValue, MK_BOOL, MK_LIST, StringValue } from "../values.ts";
+import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue } from "../values.ts";
+import { equals } from "./statements.ts";
 
 // Evaluates a numeric expression between two given 'NumberValue's and an operator and returns its result
 function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
@@ -162,6 +163,45 @@ export function evaluate_binary_expression(node: BinaryExpression, env: Environm
     if (comparison_operators.includes(op)) return evaluate_comparison_binary_expression(left, right, op);
 
     return MK_NULL();
+}
+
+// Evaluates a 'MembershipExpression' and returns its result
+export function evaluate_membership_expression(node: MembershipExpression, env: Environment): RuntimeValue {
+    let left = evaluate(node.left, env) as RuntimeValue;
+    let right = evaluate(node.right, env);
+
+    if(left.type == "reactive") left = left.value
+    if(right.type == "reactive") right = right.value
+    
+    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside membership expression"));
+
+    switch (right.type) {
+        case "list": {
+            let return_value = false;
+
+            (right as ListValue).value.forEach(value => {
+                if(value.type == left.type && value.value == left.value) return_value = true
+            });
+
+            return MK_BOOL(node.not != return_value)
+        }
+            
+        case "object": {
+            if (left.type != "string") throw throwError(new InterpreterError("Invalid left parameter type in membership expression. Expected 'string' but received " + left.type))
+            const return_value: boolean = (right as ObjectValue).properties.has((left as StringValue).value);
+            return MK_BOOL(node.not != return_value)
+        }
+            
+        case "string": {
+            if (left.type != "string") throw throwError(new InterpreterError("Invalid left parameter type in membership expression. Expected 'string' but received " + left.type))
+            const return_value: boolean = (right as StringValue).value.includes((left as StringValue).value);
+            return MK_BOOL(node.not != return_value)
+        }
+            
+        default:
+            throw throwError(new InterpreterError("Invalid right parameter type in membership expression. Expected 'list', 'object' or 'string' but received " + right.type))
+    }
+
 }
 
 // Evaluates a 'LogicalExpression' and returns its result
@@ -520,3 +560,38 @@ export const evaluate_ternary_expression = (node: TernaryExpression, env: Enviro
         ? evaluate(node.left, env)
         : evaluate(node.right, env)
 )
+
+// Evaluates a choose expression and returns its result
+export function evaluate_choose_expression(node: ChooseExpression, env: Environment): RuntimeValue {
+    // Evaluates the subject expression
+    const subject = evaluate(node.subject, env);
+    
+    // Declares a temporary environment for the choose expression
+    const tempEnv = new Environment(env);
+    // If a temporary variable is defined, assigns the subject to it
+    if (node.tempVariable) tempEnv.declareVar(node.tempVariable.symbol, subject, false);
+    
+    let conditionsMet = false;
+    const results: RuntimeValue[] = [];
+    for (const chooseCase of node.cases) {
+        if (chooseCase.conditions) {
+            // If the case has conditions, evaluates them and checks if any of them is true
+            const conditions = chooseCase.conditions.map((cond: Expression) => evaluate(cond, tempEnv));
+            if (conditions.some((cond: RuntimeValue, index: number) => equals(cond, subject) || ((chooseCase.conditions![index].kind == "BinaryExpression" || chooseCase.conditions![index].kind == "LogicalExpression") && (cond as BoolValue).value))) {
+                conditionsMet = true;
+
+                // If any of the conditions is true, evaluates the case's body and returns its result
+                if(node.chooseAll) results.push(evaluate(chooseCase.body as Expression, tempEnv));
+                else return evaluate(chooseCase.body as Expression, tempEnv);
+            }
+        }
+    }
+    
+    if (node.defaultCase && !conditionsMet) {
+        // If no case matched and a default case exists, evaluates the default case's body
+        if (node.chooseAll) results.push(evaluate(node.defaultCase.body as Expression, tempEnv));
+        else return evaluate(node.defaultCase.body as Expression, tempEnv);
+    }
+
+    return MK_LIST(results);
+}
