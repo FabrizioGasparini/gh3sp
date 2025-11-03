@@ -169,6 +169,8 @@ Questa roadmap descrive lo sviluppo e l'evoluzione del linguaggio di programmazi
 
 ## v2.3.1
 ### Aggiunte:
+### Correzioni:
+- Nella concatenazione di oggetti adesso il valore dell'ultimo oggetto viene selezionato correttamente invece di restituisce 'null' 
 
 ---
 

@@ -1,0 +1,237 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "Gh3sp",
+    "scopeName": "source.gh3sp",
+    "patterns": [{ "include": "#comments" }, { "include": "#strings" }, { "include": "#numbers" }, { "include": "#builtins" }, { "include": "#choose" }, { "include": "#objects" }, { "include": "#types" }, { "include": "#booleans" }, { "include": "#operators" }, { "include": "#keywords" }, { "include": "#functions" }, { "include": "#properties" }, { "include": "#lists" }, { "include": "#constants" }, { "include": "#variables" }],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.hashtag.gh3sp",
+                    "begin": "#",
+                    "beginCaptures": {
+                        "0": { "name": "punctuation.definition.comment.gh3sp" }
+                    },
+                    "end": "$"
+                },
+                {
+                    "name": "comment.block.gh3sp",
+                    "begin": "/\\*",
+                    "beginCaptures": {
+                        "0": { "name": "punctuation.definition.comment.gh3sp" }
+                    },
+                    "end": "\\*/"
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.gh3sp",
+                    "match": "(\\s+)?\\b(let|const|fn|if|else|for|while|foreach|in|not|choose|chooseall|case|default|break|continue|pass|import|export|reactive)\\b"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.gh3sp",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.gh3sp",
+                            "match": "\\\\."
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.gh3sp",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.gh3sp",
+                            "match": "\\\\."
+                        }
+                    ]
+                }
+            ]
+        },
+        "choose": {
+            "begin": "\\bchoose\\b\\s+([a-zA-Z_][a-zA-Z0-9_]*)((?:\\.[a-zA-Z_][a-zA-Z0-9_]*)*)(?:\\s*=>\\s*([a-zA-Z_][a-zA-Z0-9_]*))?\\s*\\{",
+            "beginCaptures": {
+                "0": { "name": "keyword.control.choose.gh3sp" },
+                "1": { "name": "variable.parameter.choose.gh3sp" },
+                "2": { "name": "punctuation.section.block.begin.gh3sp" },
+                "3": { "name": "keyword.operator.arrow.gh3sp" },
+                "4": { "name": "variable.parameter.choose.gh3sp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.section.block.end.gh3sp" }
+            },
+            "name": "meta.choose.gh3sp",
+            "patterns": [
+                {
+                    "begin": "\\bcase\\b\\s+",
+                    "beginCaptures": {
+                        "0": { "name": "keyword.control.case.gh3sp" },
+                        "1": { "name": "variable.other.case.gh3sp" },
+                        "2": { "name": "punctuation.separator.case.gh3sp" }
+                    },
+                    "end": "(?=\\bcase\\b|\\bdefault\\b|\\})",
+                    "name": "meta.case.gh3sp",
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "include": "#strings"
+                        },
+                        {
+                            "include": "#keywords"
+                        },
+                        {
+                            "include": "#variables"
+                        },
+                        {
+                            "include": "#numbers"
+                        },
+                        {
+                            "include": "#operators"
+                        }
+                    ]
+                },
+                {
+                    "begin": "\\bdefault\\b\\s*:",
+                    "beginCaptures": {
+                        "0": { "name": "keyword.control.default.gh3sp" },
+                        "1": { "name": "punctuation.separator.case.gh3sp" }
+                    },
+                    "end": "(?=\\bcase\\b|\\bdefault\\b|\\})",
+                    "name": "meta.default.gh3sp",
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "include": "#strings"
+                        },
+                        {
+                            "include": "#keywords"
+                        },
+                        {
+                            "include": "#variables"
+                        },
+                        {
+                            "include": "#numbers"
+                        },
+                        {
+                            "include": "#operators"
+                        }
+                    ]
+                }
+            ]
+        },
+        "variables": {
+            "patterns": [
+                {
+                    "name": "variable.other.gh3sp",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+                }
+            ]
+        },
+        "builtins": {
+            "patterns": [
+                {
+                    "name": "support.function.builtin.gh3sp",
+                    "match": "\\b(str|int|length|type|print|input|assert)\\b"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.float.gh3sp",
+                    "match": "\\b\\d+\\.\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.integer.gh3sp",
+                    "match": "\\b\\d+\\b"
+                },
+                {
+                    "name": "constant.numeric.hex.gh3sp",
+                    "match": "\\b0x[0-9a-fA-F]+\\b"
+                }
+            ]
+        },
+        "booleans": {
+            "patterns": [
+                {
+                    "name": "constant.language.boolean.gh3sp",
+                    "match": "\\b(true|false|null)\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                { "name": "keyword.operator.arithmetic.gh3sp", "match": "(\\+|\\-|\\*|\\/|%)" },
+                { "name": "keyword.operator.assignment.gh3sp", "match": "(=|\\+=|\\-=|\\*=|\\/=|%=)" },
+                { "name": "keyword.operator.comparison.gh3sp", "match": "(==|!=|<=|>=|<|>)" },
+                { "name": "keyword.operator.logical.gh3sp", "match": "(\\!|&&|\\|\\|)" },
+                { "name": "keyword.operator.ternary.gh3sp", "match": "(\\?|:)" },
+                { "name": "keyword.operator.arrow.gh3sp", "match": "=>" }
+            ]
+        },
+        "functions": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.gh3sp",
+                    "match": "\\bfn\\s+[a-zA-Z_][a-zA-Z0-9_]*"
+                }
+            ]
+        },
+        "properties": {
+            "patterns": [
+                {
+                    "name": "variable.other.property.gh3sp",
+                    "match": "\\.[a-zA-Z_][a-zA-Z0-9_]*"
+                }
+            ]
+        },
+        "lists": {
+            "patterns": [
+                {
+                    "name": "meta.brackets.list.gh3sp",
+                    "begin": "\\[",
+                    "end": "\\]",
+                    "patterns": [{ "include": "#numbers" }, { "include": "#strings" }, { "include": "#variables" }]
+                }
+            ]
+        },
+        "objects": {
+            "name": "meta.object.gh3sp",
+            "begin": "\\{",
+            "end": "\\}",
+            "patterns": [
+                {
+                    "name": "string.quoted.double.gh3sp",
+                    "match": "\"[^\"]+\""
+                },
+                {
+                    "name": "punctuation.separator.key-value.gh3sp",
+                    "match": ":"
+                },
+                {
+                    "name": "constant.numeric.gh3sp",
+                    "match": "\\b[0-9]+(\\.[0-9]+)?\\b"
+                },
+                {
+                    "name": "variable.gh3sp",
+                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+                }
+            ]
+        }
+    }
+}

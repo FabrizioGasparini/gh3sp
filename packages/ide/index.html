@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev-Gh3</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <header>
+        <div class="button-group">
+            <button id="openBtn">📂 Apri</button>
+            <button id="saveBtn">💾 Salva</button>
+        </div>
+        <div class="button-group">
+            <button id="runBtn">▶️ Esegui</button>
+            <button id="clearConsoleBtn">🧹 Pulisci Console</button>
+        </div>
+    </header>
+
+    <div id="editor"></div>
+
+    <div class="console-header">
+        <span class="console-title">📄 Console</span>
+    </div>
+    <div class="console-area" id="console">
+        <div id="output"></div>
+    </div>
+
+    <div id="input-dialog">
+        <label for="user-input">Inserisci un valore:</label>
+        <input type="text" id="user-input" style="margin-top: 10px; padding: 5px; width: 100%; " />
+        <button id="submit-input" style="margin: 0; margin-top: 10px;">Invia</button>
+    </div>
+
+    <script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+    <script src="renderer.js"></script>
+</body>
+
+</html>

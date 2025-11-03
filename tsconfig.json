@@ -3,10 +3,15 @@
     "module": "commonjs",
     "target": "ES2022",           
     "outDir": "dist",             
-    "rootDir": "./src",
+    "rootDir": "./packages",
     "esModuleInterop": true,         
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./packages/*"],
+      "@core/*": ["./packages/core/*"],
+      "@cli/*": ["./packages/cli/*"],
+    }
   },
-  "include": ["**/*.ts"],           
-  "exclude": ["node_modules", "libraries", "gh3sp-lib", "test-libraries", "gh3sp-ide", "debugger-temp"]       
+  "include": ["./packages/**/*.ts"],           
+  "exclude": ["node_modules", "libraries", "gh3sp-lib", "test-libraries", "gh3sp-ide", "gh3sp-ext"]       
 }

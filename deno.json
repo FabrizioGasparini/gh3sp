@@ -1,0 +1,7 @@
+{
+    "imports": {
+        "@/": "./packages/",
+        "@core/": "./packages/core/",
+        "@cli/": "./packages/cli/"
+    }
+}

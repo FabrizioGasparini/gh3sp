@@ -1,0 +1,32 @@
+{
+    "Function Declaration": {
+        "prefix": "fn",
+        "body": ["fn ${1:name}(${2:params}) {", "\t$0", "}"],
+        "description": "Crea una dichiarazione di funzione"
+    },
+    "Variable Declaration": {
+        "prefix": "let",
+        "body": ["let ${1:name} = ${2:value}"],
+        "description": "Crea una dichiarazione di variabile"
+    },
+    "If Statement": {
+        "prefix": "if",
+        "body": ["if (${1:condition}) {", "\t$0", "}"],
+        "description": "Crea una dichiarazione if"
+    },
+    "For Loop": {
+        "prefix": "for",
+        "body": ["for (let ${1:i} = 0; $1 < ${2:count}; $1++) {", "\t$0", "}"],
+        "description": "Crea un ciclo for"
+    },
+    "While Loop": {
+        "prefix": "while",
+        "body": ["while (${1:condition}) {", "\t$0", "}"],
+        "description": "Crea un ciclo while"
+    },
+    "Choose Statement": {
+        "prefix": "choose",
+        "body": ["choose ${1:x} {", "\tcase ${2:1}:", "\t\t$3", "\t$0", "\tdefault:", "\t\t${4:// default case}", "}"],
+        "description": "Crea una dichiarazione choose"
+    }
+}

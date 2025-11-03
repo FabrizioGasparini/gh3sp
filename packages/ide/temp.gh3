@@ -1,0 +1,3 @@
+import "GMath"
+
+print(Math.PI)

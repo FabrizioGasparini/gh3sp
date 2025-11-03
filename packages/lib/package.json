@@ -1,0 +1,10 @@
+{
+  "name": "gh3-lib",
+  "version": "1.0.3",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

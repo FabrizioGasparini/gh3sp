@@ -26,6 +26,7 @@
         "@electron-forge/plugin-fuses": "^7.5.0",
         "@electron/fuses": "^1.8.0",
         "@types/node": "^16.18.115",
+        "@types/readline-sync": "^1.4.8",
         "electron": "33.0.2",
         "typescript": "^4.9.5"
     },

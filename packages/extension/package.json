@@ -1,0 +1,70 @@
+{
+    "name": "gh3sp-syntax-snippets",
+    "displayName": "Gh3sp Language Support",
+    "description": "Supporto per la sintassi e gli snippet del linguaggio Gh3sp.",
+    "version": "1.0.0",
+    "id": "gh3sp",
+    "publisher": "Fabrizio Gasparini",
+    "engines": {
+        "vscode": "^1.100.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Snippets"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "gh3sp",
+                "aliases": [
+                    "Gh3sp",
+                    "gh3sp"
+                ],
+                "extensions": [
+                    ".gh3"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "gh3sp",
+                "scopeName": "source.gh3sp",
+                "path": "./syntaxes/gh3sp.tmLanguage.json"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "gh3sp",
+                "path": "./snippets/gh3sp.json"
+            }
+        ],
+        "themes": [
+            {
+                "label": "Gh3sp Theme",
+                "uiTheme": "vs-dark",
+                "path": "./themes/gh3sp.json"
+            }
+        ],
+        "iconThemes": [
+            {
+                "id": "gh3sp-icons",
+                "label": "Gh3sp Icons",
+                "path": "./icons/gh3sp.json"
+            }
+        ]
+    },
+    "keywords": [
+        "gh3sp",
+        "language",
+        "syntax highlighting",
+        "snippets",
+        "vscode",
+        "extension"
+    ],
+    "license": "MIT",
+    "devDependencies": {
+        "@types/vscode": "^1.100.0",
+        "vscode": "^1.1.37"
+    }
+}

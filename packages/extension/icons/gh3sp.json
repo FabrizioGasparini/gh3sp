@@ -1,0 +1,20 @@
+{
+    "iconDefinitions": {
+        "gh3sp-icon": {
+            "iconPath": "./gh3sp.svg"
+        }
+    },
+    "fileExtensions": {
+        "gh3": "gh3sp-icon"
+    },
+    "light": {
+        "fileExtensions": {
+            "gh3": "gh3sp-icon"
+        }
+    },
+    "dark": {
+        "fileExtensions": {
+            "gh3": "gh3sp-icon"
+        }
+    }
+}
