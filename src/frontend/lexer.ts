@@ -22,6 +22,11 @@ export enum TokenType {
     Case,
     DefaultCase,
 
+    // Classes
+    Class,
+    Public,
+    Private,
+
     // Control Flow
     Break,
     Continue,
@@ -88,6 +93,10 @@ const KEYWORDS: Record<string, TokenType> = {
     chooseall: TokenType.ChooseAll,
     case: TokenType.Case,
     default: TokenType.DefaultCase,
+
+    class: TokenType.Class,
+    public: TokenType.Public,
+    private: TokenType.Private,
 
     break: TokenType.Break,
     continue: TokenType.Continue,

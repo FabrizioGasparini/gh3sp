@@ -1,7 +1,7 @@
 import { MK_BOOL, type FunctionCall, type ReactiveValue } from "../values.ts";
 import { FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "../values.ts";
 import { handleError } from "../../utils/errors_handler.ts";
-import * as readlineSync from "readline-sync.ts";
+import * as readlineSync from "readline-sync";
 import type Environment from "../environments.ts";
 
 const throwError = (error: Error, line: number, column: number) => { throw handleError(error, line, column) };
