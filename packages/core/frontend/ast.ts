@@ -3,6 +3,7 @@ export type NodeType =
     | "Program"
     | "VariableDeclaration"
     | "FunctionDeclaration"
+    | "ClassDeclaration"
     | "IfStatement"
     | "ForStatement"
     | "ForEachStatement"
@@ -59,6 +60,13 @@ export interface FunctionDeclaration extends Statement {
     name: string;
     expectedArgs: number;
     body: Statement[];
+}
+
+export interface ClassDeclaration extends Statement {
+    kind: "ClassDeclaration";
+    name: string;
+    parameters: string[];
+    blocks: Record<string,Statement[]>;
 }
 
 export interface IfStatement extends Statement {
