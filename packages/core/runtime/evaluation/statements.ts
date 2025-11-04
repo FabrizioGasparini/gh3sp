@@ -1,9 +1,9 @@
-import { AssignmentExpression, ChooseStatement, CompoundAssignmentExpression, Expression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, Statement, VariableDeclaration, WhileStatement, type ControlFlowStatement, type ExportDeclaration, type ImportStatement } from "@core/frontend/ast.ts";
+import { AssignmentExpression, ChooseStatement, ClassDeclaration, CompoundAssignmentExpression, Expression, ForEachStatement, ForStatement, FunctionDeclaration, Identifier, IfStatement, NumericLiteral, Program, Statement, VariableDeclaration, WhileStatement, type ControlFlowStatement, type ExportDeclaration, type ImportStatement } from "@core/frontend/ast.ts";
 import { InterpreterError } from "@core/utils/errors_handler.ts";
 import Environment from "@core/runtime/environments.ts";
 import { evaluate, throwError } from "@core/runtime/interpreter.ts";
 import { compileLibrary } from "@core/libraries/index.ts";
-import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER, type ReactiveValue, type BreakSignal, type ContinueSignal, NativeFunctionValue, ObjectValue, Signal, BoolValue  } from "@core/runtime/values.ts";
+import { RuntimeValue, MK_NULL, FunctionValue, ListValue, MK_NUMBER, type ReactiveValue, type BreakSignal, type ContinueSignal, NativeFunctionValue, ObjectValue, Signal, BoolValue, ClassValue  } from "@core/runtime/values.ts";
 
 export const evaluate_program = (program: Program, env: Environment): RuntimeValue => (program.body.map(stmt => evaluate(stmt, env))[program.body.length - 1])
 
@@ -83,6 +83,18 @@ export function evaluate_function_declaration(declaration: FunctionDeclaration, 
     return declaration.name ? env.declareVar(declaration.name, fn, true) : fn;
 }
 
+export function evaluate_class_declaration(declaration: ClassDeclaration, env: Environment): RuntimeValue {
+    const cls = {
+        type: "class",
+        name: declaration.name,
+        parameters: declaration.parameters,
+        blocks: declaration.blocks,
+    } as ClassValue;
+    
+    // If the functions has a name (standard function), it adds it to the environment and returns it, otherwise it just returns it (anonymous function)
+    return declaration.name ? env.declareVar(declaration.name, cls, true) : cls;
+}
+
 // Evaluates the if statement's condition, if it's true it evaluates the 'then' node and returns it, if it's false it evaluates the 'else' node and returns it. If both nodes are empty, it just returns NULL
 export const evaluate_if_statement = (node: IfStatement, env: Environment): RuntimeValue => {
     return evaluate(node.condition, env).value == true
@@ -120,7 +132,7 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
 
     // While the for statement's condition is met, evaluates the body nodes
     while (condition.value) {
-        loop_env.inside_loop = true
+        loop_env.scopeType = "loop";
         // Throws an error if the number of executed iterations exceeds the max number of iterations
         if (iterations++ >= loop_env.MAX_ITERATIONS) throwError(new InterpreterError(`Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (${loop_env.MAX_ITERATIONS})`));
         
@@ -132,7 +144,7 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
             switch (sig.type)
             {
                 case "break":
-                    loop_env.inside_loop = false
+                    loop_env.scopeType = "global";
                     break
                 
                 case "continue":
@@ -143,7 +155,7 @@ export function evaluate_for_statement(node: ForStatement, env: Environment): Ru
             }
         }
 
-        if (!loop_env.inside_loop) return MK_NULL();
+        if (loop_env.scopeType !== "loop") return MK_NULL();
         
         // Depending on the increment type updates the for statement's index variable
         switch (node.increment.kind) {
@@ -185,7 +197,7 @@ export function evaluate_while_statement(node: WhileStatement, env: Environment)
 
     // While the while statement's condition is met, evaluates the body nodes
     while (condition.value) {
-        loop_env.inside_loop = true
+        loop_env.scopeType = "loop";
         // Throws an error if the number of executed iterations exceeds the max number of iterations
         if (iterations++ >= loop_env.MAX_ITERATIONS) throw throwError(new InterpreterError(`Potential infinite loop detected. Loop exceeded the maximum number of allowed iterations (${loop_env.MAX_ITERATIONS})`));
         
@@ -197,7 +209,7 @@ export function evaluate_while_statement(node: WhileStatement, env: Environment)
             switch (sig.type)
             {
                 case "break":
-                    loop_env.inside_loop = false
+                    loop_env.scopeType = "global";
                     break
                 
                 case "continue":
@@ -208,7 +220,7 @@ export function evaluate_while_statement(node: WhileStatement, env: Environment)
             }
         }
 
-        if (!loop_env.inside_loop) return MK_NULL();
+        if (loop_env.scopeType !== "loop") return MK_NULL();
         
         // Re-evaluates and sets the for statement's condition before repeating the loop
         condition = evaluate(node.condition, loop_env);
@@ -249,7 +261,7 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
         if (node.index && node.index.kind == "VariableDeclaration") loop_env.declareVar(((node.index as VariableDeclaration).assignee as Identifier).symbol, MK_NUMBER(0), false)
 
         const element = list.value[i];
-        loop_env.inside_loop = true
+        loop_env.scopeType = "loop";
 
         // Assigns the value of the current iterated element to the loop variable
         loop_env.assignVar(loopElement.symbol, element);
@@ -263,7 +275,7 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
             switch (sig.type)
             {
                 case "break":
-                    loop_env.inside_loop = false
+                    loop_env.scopeType = "global";
                     break
                 
                 case "continue":
@@ -273,8 +285,8 @@ export function evaluate_foreach_statement(node: ForEachStatement, env: Environm
                     throw signal
             }
         }
-                
-        if (!loop_env.inside_loop) return MK_NULL();
+
+        if (loop_env.scopeType !== "loop") return MK_NULL();
     }
 
     return MK_NULL();

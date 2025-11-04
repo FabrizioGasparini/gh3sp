@@ -2,7 +2,7 @@ import { Statement, type Expression } from "@core/frontend/ast.ts";
 import Environment from "@core/runtime/environments.ts";
 
 // List of types that every value can have
-export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "native-function" | "list" | "function" | "reactive";
+export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "class" | "class-instance" | "native-function" | "list" | "function" | "reactive";
 
 // Default value
 export interface RuntimeValue {
@@ -96,6 +96,21 @@ export interface FunctionValue extends RuntimeValue {
     expectedArgs: number;
     declarationEnv: Environment;
     body: Statement[];
+    boundThis: ClassInstanceValue | null;
+}
+
+export interface ClassValue extends RuntimeValue {
+    type: "class";
+    name: string;
+    parameters: string[];
+    blocks: Record<string, Statement[]>;
+}
+
+export interface ClassInstanceValue extends RuntimeValue {
+    type: "class-instance";
+    name: string;
+    parameters: string[];
+    environment: Environment;
 }
 
 // Reactive value

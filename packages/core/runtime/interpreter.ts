@@ -1,8 +1,8 @@
 import { RuntimeValue, MK_NUMBER, MK_STRING, MK_BOOL, MK_NULL } from "@core/runtime/values.ts";
-import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, MembershipExpression, ChooseStatement, ChooseExpression } from "@core/frontend/ast.ts";
+import { NumericLiteral, Statement, BinaryExpression, Program, Identifier, VariableDeclaration, AssignmentExpression, ObjectLiteral, CallExpression, FunctionDeclaration, MemberExpression, StringLiteral, IfStatement, CompoundAssignmentExpression, ForStatement, WhileStatement, ListLiteral, ForEachStatement, type LogicalExpression, type BooleanLiteral, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, MembershipExpression, ChooseStatement, ChooseExpression, ClassDeclaration } from "@core/frontend/ast.ts";
 import Environment from "@core/runtime/environments.ts";
 import { evaluate_identifier, evaluate_binary_expression, evaluate_assignment_expression, evaluate_object_expression, evaluate_call_expression, evaluate_member_expression, evaluate_compound_assignment_expression, evaluate_list_expression, evaluate_logical_expression, evaluate_ternary_expression, evaluate_membership_expression, evaluate_choose_expression } from "@core/runtime/evaluation/expressions.ts";
-import { evaluate_choose_statement, evaluate_control_flow_statement, evaluate_export_declaration, evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "@core/runtime/evaluation/statements.ts";
+import { evaluate_choose_statement, evaluate_class_declaration, evaluate_control_flow_statement, evaluate_export_declaration, evaluate_for_statement, evaluate_foreach_statement, evaluate_function_declaration, evaluate_if_statement, evaluate_program, evaluate_variable_declaration, evaluate_while_statement } from "@core/runtime/evaluation/statements.ts";
 import { handleError, InterpreterError } from "@core/utils/errors_handler.ts";
 
 // Declares current line & column, useful for errors handling
@@ -51,8 +51,11 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
 
         case "FunctionDeclaration":
             return evaluate_function_declaration(astNode as FunctionDeclaration, env);
-        
-        
+
+        case "ClassDeclaration":
+            return evaluate_class_declaration(astNode as ClassDeclaration, env);
+
+
         case "BinaryExpression":
             return evaluate_binary_expression(astNode as BinaryExpression, env);
 

@@ -1,9 +1,10 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, ChooseExpression, CompoundAssignmentExpression, Expression, Identifier, ListLiteral, MemberExpression, MembershipExpression, ObjectLiteral, StringLiteral, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "@core/frontend/ast.ts";
+import { AssignmentExpression, BinaryExpression, CallExpression, ChooseExpression, CompoundAssignmentExpression, Expression, FunctionDeclaration, Identifier, ListLiteral, MemberExpression, MembershipExpression, ObjectLiteral, StringLiteral, VariableDeclaration, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "@core/frontend/ast.ts";
 import { InterpreterError, MathError } from "@core/utils/errors_handler.ts";
 import Environment from "@core/runtime/environments.ts";
 import { evaluate, throwError } from "@core/runtime/interpreter.ts";
-import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue, BoolValue, FunctionValue, ListValue, MK_BOOL, MK_LIST, StringValue } from "@core/runtime/values.ts";
+import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue, BoolValue, FunctionValue, ListValue, MK_BOOL, MK_LIST, StringValue, ClassValue, ClassInstanceValue } from "@core/runtime/values.ts";
 import { equals } from "@core/runtime/evaluation/statements.ts";
+import { MK_OBJECT } from "@core/runtime/values.ts";
 
 // Evaluates a numeric expression between two given 'NumberValue's and an operator and returns its result
 function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
@@ -252,7 +253,7 @@ function get_object_props(node: MemberExpression): string[] {
     let object = node.object
     // If the member expression is computed, set the first props as a 'StringLiteral' type, else set it as an 'Identifier'
     const props: string[] = [node.computed ? (node.property as StringLiteral).value : (node.property as Identifier).symbol]
-    
+
     if (node.computed) {
         if (object.kind != "Identifier")
         {
@@ -285,7 +286,7 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
         // obj[key] = value, list[idx] = value
         case "MemberExpression": {
             const member = node.assignee as MemberExpression 
-
+            
             const expression = get_member_expression_result(member, env)
             const variable = get_member_expression_variable(member).symbol
 
@@ -319,7 +320,25 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
                     (result as ObjectValue).properties.set(key, evaluate(node.value, env))
                     return env.assignVar(variable, object)
                 }
+                    
+                case "class-instance": {
+                    const instance = expression as ClassInstanceValue;
+                    const props = get_object_props(member);
+                    const key = props.pop()!;
+                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"))
                 
+                    let result = instance.value;
+                    for (const prop of props) if ((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!;
+                
+                    if (!(result as ObjectValue).properties.has(key)) throw throwError(new InterpreterError("Invalid class key (not found)"));
+                    
+                    // devi aggiornare il valore dell'istanza e salvarlo nell'environment
+                    (result as ObjectValue).properties.set(key, evaluate(node.value, env));
+                    instance.environment.assignVar(key, evaluate(node.value, env), true);
+                    
+                    return env.assignVar(variable, instance.value)
+                }
+
                 default:
                     throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
             }
@@ -463,8 +482,20 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
             return list.value[index]
         }
             
+        case "class-instance": {
+            const instance = object as ClassInstanceValue;
+            
+            const key = get_object_props(member).pop()!;
+            if (!key) throw throwError(new InterpreterError('Invalid object key access: ' + member.property.kind));
+
+            const obj = instance.value as ObjectValue;            
+            if (obj.properties.has(key)) return obj.properties.get(key)!;
+
+            throw throwError(new InterpreterError(`Member '${key}' does not exist on class '${instance.name}'`));
+        }
+
         default:
-            console.error("ERRORE, expressions:402")
+            console.error("Invalid member expression on type: " + object.type)
             break; 
     }
     
@@ -531,9 +562,9 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
     if (fn.type == "function") {
         const func = fn as FunctionValue;
         const scope = new Environment(func.declarationEnv);
-        
-        if (func.expectedArgs != 0 && func.expectedArgs != args.length) throw throwError(new InterpreterError("Invalid number of arguments. Expected " + func.expectedArgs + " but received " + args.length))
 
+        if (func.expectedArgs != 0 && func.expectedArgs != args.length) throw throwError(new InterpreterError("Invalid number of arguments. Expected " + func.expectedArgs + " but received " + args.length))
+        
         for (let i = 0; i < func.parameters.length; i++) {
             const varname = func.parameters[i];
             scope.declareVar(varname, args[i], false);
@@ -543,6 +574,111 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
         for (const statement of func.body) result = evaluate(statement, scope);
 
         return result;
+    }
+
+    if (fn.type == "class") {
+        const cls = fn as ClassValue;
+        
+        const instanceEnv = new Environment(env);
+        instanceEnv.scopeType = "class-instance";
+        cls.parameters.forEach((param, index) => {
+            const arg = args[index] ? args[index] : MK_NULL();
+            instanceEnv.declareVar(param, arg, false);
+        });
+
+        // Initializes the instance object properties and methods
+        const instance = new Map<string, RuntimeValue>();
+        const privateMembers = new Map<string, RuntimeValue>();
+
+        let objThis = MK_OBJECT(new Map([...instance, ...privateMembers]));
+        instanceEnv.declareVar("this", objThis, true);        
+
+        for (const member of cls.blocks.body) {
+            if (member.kind == "FunctionDeclaration") {
+                const func = member as FunctionDeclaration;
+                const fn_value = {
+                    type: "function",
+                    name: func.name,
+                    parameters: func.parameters,
+                    expectedArgs: func.expectedArgs,
+                    declarationEnv: env,
+                    body: func.body,
+                } as FunctionValue;
+
+                privateMembers.set(func.name, fn_value);
+                instanceEnv.declareVar(func.name, fn_value, true);
+            }
+            else if (member.kind == "VariableDeclaration") {
+                const var_decl = member as VariableDeclaration;
+                const var_value = evaluate(var_decl.value!, instanceEnv);
+
+                const name = (var_decl.assignee as Identifier).symbol;
+
+                privateMembers.set(name, var_value);
+                instanceEnv.declareVar(name, var_value, false);
+            }
+        }
+
+        for (const member of cls.blocks.public) {
+            if (member.kind == "FunctionDeclaration") {
+                const func = member as FunctionDeclaration;
+                const fn_value = {
+                    type: "function",
+                    name: func.name,
+                    parameters: func.parameters,
+                    expectedArgs: func.expectedArgs,
+                    declarationEnv: instanceEnv,
+                    body: func.body,
+                } as FunctionValue;
+
+                instance.set(func.name, fn_value);
+                instanceEnv.declareVar(func.name, fn_value, true);
+            }
+            else if (member.kind == "VariableDeclaration") {
+                const var_decl = member as VariableDeclaration;
+                const var_value = evaluate(var_decl.value!, instanceEnv);
+
+                const name = (var_decl.assignee as Identifier).symbol;
+
+                instance.set(name, var_value);
+                instanceEnv.declareVar(name, var_value, false);
+            }
+        }
+
+        for (const member of cls.blocks.private) {
+            if (member.kind == "FunctionDeclaration") {
+                const func = member as FunctionDeclaration;
+                const fn_value = {
+                    type: "function",
+                    name: func.name,
+                    parameters: func.parameters,
+                    expectedArgs: func.expectedArgs,
+                    declarationEnv: instanceEnv,
+                    body: func.body,
+                } as FunctionValue;
+
+                privateMembers.set(func.name, fn_value);
+                instanceEnv.declareVar(func.name, fn_value, true);
+            }
+            else if (member.kind == "VariableDeclaration") {
+                const var_decl = member as VariableDeclaration;
+                const var_value = evaluate(var_decl.value!, instanceEnv);
+                const name = (var_decl.assignee as Identifier).symbol;
+
+                privateMembers.set(name, var_value);
+                instanceEnv.declareVar(name, var_value, false);
+            }
+        }
+
+        objThis = MK_OBJECT(new Map([...instance, ...privateMembers]));
+        instanceEnv.assignVar("this", objThis, true);
+
+        return {
+            type: "class-instance",
+            name: cls.name,
+            value: MK_OBJECT(instance),
+            environment: instanceEnv,
+        } as ClassInstanceValue;
     }
 
     throw throwError(new InterpreterError("Cannot call value that is not a function: " + JSON.stringify(fn)));

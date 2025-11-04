@@ -24,7 +24,7 @@ export default class Environment {
     public parent?: Environment;
     // Max number of allowed iterations
     public MAX_ITERATIONS: number;
-    public inside_loop: boolean = false;
+    public scopeType: "global" | "loop" | "class-instance" = "global";
 
     // Map of the environment's declared variables
     private variables: Map<string, RuntimeValue>;
@@ -58,7 +58,7 @@ export default class Environment {
     // Declares a new variable/constant, given it's name and it's value
     public declareVar(varname: string, value: RuntimeValue, constant: boolean): RuntimeValue {
         // Throws an error if the given varname already exits in the environment
-        if (this.variables.has(varname)) throwError(new InterpreterError(`Cannot declare variable '${varname}' as it already is defined`));
+        if (this.variables.has(varname) || this.parent?.variables.has(varname)) throwError(new InterpreterError(`Cannot declare variable '${varname}' as it already is defined`));
 
         // Sets the new variable to the variables map
         this.variables.set(varname, value);

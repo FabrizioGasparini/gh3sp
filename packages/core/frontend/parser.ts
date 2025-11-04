@@ -1,7 +1,7 @@
 import type Environment from "@core/runtime/environments.ts";
 import { compileLibrary } from "@core/libraries/index.ts";
 import { handleError, ParserError, ImportError } from "@core/utils/errors_handler.ts";
-import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, type NullStatement, MembershipExpression, ChooseCase, type ChooseStatement, ChooseExpression, Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration } from "@core/frontend/ast.ts";
+import { CallExpression, CompoundAssignmentExpression, ForEachStatement, ForStatement, IfStatement, ListLiteral, StringLiteral, WhileStatement, type LogicalExpression, type TernaryExpression, type ControlFlowStatement, type ExportDeclaration, type NullStatement, MembershipExpression, ChooseCase, type ChooseStatement, ChooseExpression, Statement, Program, Expression, BinaryExpression, NumericLiteral, Identifier, VariableDeclaration, AssignmentExpression, Property, ObjectLiteral, MemberExpression, FunctionDeclaration, ClassDeclaration } from "@core/frontend/ast.ts";
 import { tokenize, Token, TokenType } from "@core/frontend/lexer.ts";
 
 export default class Parser {
@@ -192,7 +192,7 @@ export default class Parser {
         const parameters: string[] = [];
         for (const arg of args) {
             // Throws an error if the current argument is not of type 'Identifier'
-            if (arg.kind != "Identifier") this.throwError(new SyntaxError("Expected string parameters inside of function declaration. " + arg));
+            if (arg.kind != "Identifier") this.throwError(new SyntaxError("Expected string parameters inside of class declaration. " + arg));
 
             // Adds the found parameters name to the parameters list
             parameters.push((arg as Identifier).symbol);
@@ -301,7 +301,7 @@ export default class Parser {
     }
 
         private parse_class_declaration(): Statement {
-        this.eat(); // Go past 'class' keywork
+        this.eat(); // Go past 'class' keyword
 
         const name = this.expect(TokenType.Identifier, "Expected class name").value;
 
@@ -319,26 +319,25 @@ export default class Parser {
 
         this.expect(TokenType.OpenBrace, "Expected '{' after class declaration");
 
-        const blocks: Record<string, Statement[]> = { public: [], private: [] };
-        const defaultBlock = "private"; // Default block      
-        let currentBlock = defaultBlock;
+        const blocks: Record<string, Statement[]> = { body: [], public: [], private: [] };
+        let currentBlock = "private"; // Default block
         // Leggiamo il corpo della classe
         while (this.not_eof() && this.at().type !== TokenType.CloseBrace) {
             if (this.at().type === TokenType.Private || this.at().type === TokenType.Public) {
                 currentBlock = this.eat().value;
-                this.expect(TokenType.OpenBrace, `Expected '{' after ${currentBlock} block`).value;
+                this.expect(TokenType.OpenBrace, `Expected '{' after ${currentBlock} block`);
                 
                 const blockStatements = this.parse_class_block();
-                blocks[currentBlock] = blockStatements;
+                blocks[currentBlock].push(...blockStatements);
 
                 this.expect(TokenType.CloseBrace, `Expected '}' after ${currentBlock} block`);
                 continue;
             }
 
             // membri senza blocco = defaultBlock
-            blocks[defaultBlock].push(this.parse_class_member());
+            blocks["body"].push(this.parse_class_member());
         }
-
+            
         this.expect(TokenType.CloseBrace, "Expected '}' after class body");
 
         return {
@@ -358,8 +357,8 @@ export default class Parser {
             // If it's at the end of the body, breaks out of the loop
             if (this.at().type == TokenType.CloseBrace) break;
             
-            // Pushes the parsed statement to the function body's list
-            members.push(this.parse_statement());
+            // Pushes the parsed class member to the members list
+            members.push(this.parse_class_member());
         }
 
         return members;
@@ -374,7 +373,7 @@ export default class Parser {
             return this.parse_variable_declaration();
         }
 
-        this.throwError(new ParserError("Unexpected token in class body; " + this.at().value, this.at().type));
+        throw this.throwError(new ParserError("Unexpected token in class body: " + this.at().value, this.at().type));
     }
 
     // Returns an if statement
