@@ -706,23 +706,30 @@ export default class Parser {
     private parse_export_declaration(): Statement {
         this.eat() // Go past export keyword
         
+        let declaration;
         switch (this.at().type) {
+
             case TokenType.Const:
             case TokenType.Let:
-                return {
-                    kind: "ExportDeclaration",
-                    declaration: this.parse_variable_declaration()
-                } as ExportDeclaration
-                
+                declaration = this.parse_variable_declaration();
+                break;
+
             case TokenType.Fn:
-                return {
-                    kind: "ExportDeclaration",
-                    declaration: this.parse_function_declaration()
-                } as ExportDeclaration
+                declaration = this.parse_function_declaration();
+                break;
         
+            case TokenType.Class:
+                declaration = this.parse_class_declaration();
+                break;
+            
             default:
                 throw this.throwError(new ParserError("Invalid export declaration. Only variables, constants and functions can be exported"))
         }
+
+        return {
+            kind: "ExportDeclaration",
+            declaration,
+        } as ExportDeclaration;
     }
 
     private parse_choose_statement(): Statement {

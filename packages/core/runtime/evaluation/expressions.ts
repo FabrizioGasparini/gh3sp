@@ -318,6 +318,8 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
                     }
                     
                     (result as ObjectValue).properties.set(key, evaluate(node.value, env))
+                    if (variable == "this") return object
+                    
                     return env.assignVar(variable, object)
                 }
                     
@@ -325,18 +327,51 @@ export function evaluate_assignment_expression(node: AssignmentExpression, env: 
                     const instance = expression as ClassInstanceValue;
                     const props = get_object_props(member);
                     const key = props.pop()!;
-                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"))
-                
-                    let result = instance.value;
-                    for (const prop of props) if ((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!;
-                
-                    if (!(result as ObjectValue).properties.has(key)) throw throwError(new InterpreterError("Invalid class key (not found)"));
-                    
-                    // devi aggiornare il valore dell'istanza e salvarlo nell'environment
-                    (result as ObjectValue).properties.set(key, evaluate(node.value, env));
-                    instance.environment.assignVar(key, evaluate(node.value, env), true);
-                    
-                    return env.assignVar(variable, instance.value)
+                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"));
+
+                    let current: RuntimeValue = instance;
+
+                    for (const prop of props) {
+                        if (current.type === "class-instance") {
+                            const classVal = current as ClassInstanceValue;
+                            if (!classVal.value.properties.has(prop)) {
+                                throw throwError(new InterpreterError(`Property '${prop}' not found in class instance.`));
+                            }
+                            current = classVal.value.properties.get(prop)!;
+                        } else if (current.type === "object") {
+                            const objVal = current as ObjectValue;
+                            if (!objVal.properties.has(prop)) {
+                                throw throwError(new InterpreterError(`Property '${prop}' not found in object.`));
+                            }
+                            current = objVal.properties.get(prop)!;
+                        } else {
+                            throw throwError(new InterpreterError(`Cannot access property '${prop}' of non-object type.`));
+                        }
+                    }
+
+                    const valueToSet = evaluate(node.value, env);
+
+                    if (current.type === "class-instance") {
+                        const targetClass = current as ClassInstanceValue;
+                        if (!targetClass.value.properties.has(key)) {
+                            throw throwError(new InterpreterError(`Invalid property '${key}' in class instance.`));
+                        }
+
+                        // Aggiorna la proprietà pubblica
+                        targetClass.value.properties.set(key, valueToSet);
+
+                        // Sincronizza anche l’ambiente dell’istanza (this.a, this.b, ecc.)
+                        targetClass.environment.assignVar(key, valueToSet, true);
+                    }
+
+                    else if (current.type === "object") {
+                        const targetObj = current as ObjectValue;
+                        targetObj.properties.set(key, valueToSet);
+                    }
+
+                    // Non riassegnare "this"
+                    if (variable === "this") return instance;
+                    return env.assignVar(variable, instance);
                 }
 
                 default:
@@ -501,54 +536,6 @@ export function evaluate_member_expression(member: MemberExpression, env: Enviro
     
     return MK_NULL()
 }
-/*export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
-    const object: Expression = get_member_expression_variable(member);
-    const props = get_object_props(member)
-    console.log(props)
-    console.log(object)
-
-    const varname = (object as Identifier).symbol;
-    const variable = env.lookupVar(varname);
-
-    switch (variable.type) {
-        case "object": {
-            const object = variable as ObjectValue;
-            
-            if (member.computed && object.native) throw throwError(new InterpreterError("Invalid native object key access. Expected valid key (e.g. obj.key)"))    
-        
-            const key = props.pop()!
-
-            if (!key)
-                throw throwError(new InterpreterError('Invalid object key access. Expected valid key (e.g., obj.key or obj["key"]), but received: ' + JSON.stringify(member.property)));
-            
-            let result = variable;
-            for (const prop of props)
-                if ((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
-            
-                
-            if (!(result as ObjectValue).properties.has(key))
-                return MK_NULL()
-            
-            
-            return (result as ObjectValue).properties.get(key)!
-        }
-
-        case "list": {
-            if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access (e.g. list[idx: number]), but received" + JSON.stringify(member.property)));
-            
-            const index = (evaluate(member.property, env) as NumberValue).value;
-            if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index. Expected valid index (e.g. list[idx: number])"));
-            
-            const list = variable as ListValue;
-            if (index < 0 || index > list.value.length - 1) throw throwError(new InterpreterError("Invalid list index. Index must be between 0 and " + (list.value.length - 1)));
-            
-            return list.value[index];
-        }
-
-        default:
-            return MK_NULL()
-    }
-}*/
 
 // Evaluates a call expression and returns its result
 export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {
@@ -610,12 +597,10 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
             }
             else if (member.kind == "VariableDeclaration") {
                 const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl.value!, instanceEnv);
-
+                const var_value = evaluate(var_decl, instanceEnv);
                 const name = (var_decl.assignee as Identifier).symbol;
 
                 privateMembers.set(name, var_value);
-                instanceEnv.declareVar(name, var_value, false);
             }
         }
 
@@ -636,12 +621,10 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
             }
             else if (member.kind == "VariableDeclaration") {
                 const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl.value!, instanceEnv);
+                const var_value = evaluate(var_decl, instanceEnv);
 
                 const name = (var_decl.assignee as Identifier).symbol;
-
                 instance.set(name, var_value);
-                instanceEnv.declareVar(name, var_value, false);
             }
         }
 
@@ -662,11 +645,10 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
             }
             else if (member.kind == "VariableDeclaration") {
                 const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl.value!, instanceEnv);
+                const var_value = evaluate(var_decl, instanceEnv);
                 const name = (var_decl.assignee as Identifier).symbol;
 
                 privateMembers.set(name, var_value);
-                instanceEnv.declareVar(name, var_value, false);
             }
         }
 
@@ -677,6 +659,7 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
             type: "class-instance",
             name: cls.name,
             value: MK_OBJECT(instance),
+            privateMembers: MK_OBJECT(privateMembers),
             environment: instanceEnv,
         } as ClassInstanceValue;
     }

@@ -1,4 +1,4 @@
-import { MK_BOOL, type FunctionCall, type ReactiveValue, FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue } from "@core/runtime/values.ts";
+import { MK_BOOL, type FunctionCall, type ReactiveValue, FunctionValue, ListValue, MK_STRING, NativeFunctionValue, ObjectValue, MK_NULL, MK_NUMBER, RuntimeValue, ClassValue, ClassInstanceValue } from "@core/runtime/values.ts";
 import { handleError } from "@core/utils/errors_handler.ts";
 import { question } from "readline-sync";
 import type Environment from "@core/runtime/environments.ts";
@@ -116,7 +116,12 @@ export function parse(node: RuntimeValue) {
         case "function":
             return parse_function(node as FunctionValue);
         case "native-function":
-            return "<built-in function " + (node as NativeFunctionValue).name + ">";
+            return "<built-in function '" + (node as NativeFunctionValue).name + "'>";
+        
+        case "class":
+            return "<class '" + (node as ClassValue).name + "'>";
+        case "class-instance":
+            return "<instance of '" + (node as ClassInstanceValue).name + "'>";
             
         default:
             return node;
@@ -127,8 +132,9 @@ export function parse(node: RuntimeValue) {
 export function parse_object(obj: ObjectValue) {
     const object: { [key: string]: RuntimeValue } = {};
     for (const [key, value] of obj.properties.entries()) object[key] = parse(value as RuntimeValue);
-    
-    return JSON.stringify(object);
+
+    const result = JSON.stringify(object).replaceAll('\\', '')
+    return result;
 }
 
 // Parses the given 'function' to a serializable type

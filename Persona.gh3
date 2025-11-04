@@ -1,0 +1,54 @@
+export class Persona(nome, anno, indirizzoIniziale) {
+    # variabile "globale" al corpo della classe
+    let specie = "Homo Sapiens"
+
+    public {
+        # --- Proprietà pubbliche ---
+        let a = 5
+        let hobby = ["programmare", "pallavolo"]
+        let dati = { citta: indirizzoIniziale, punteggio: { matematica: 9, informatica: 10 } }
+
+        # --- Metodi pubblici ---
+        fn stampa() {
+            print("📜 Scheda Persona ---")
+            print("Nome:", nome)
+            print("Anno di nascita:", anno)
+            print("Età:", this.eta)
+            print("A:", this.a)
+            print("Hobby:", str(this.hobby))
+            print("Città:", this.dati.citta)
+            print("Punteggio informatica:", this.dati.punteggio.informatica)
+            print("Specie:", specie)
+            print("---------------------")
+        }
+
+        fn getEta() => this.eta
+        fn getA() => this.a
+        fn getHobby() => this.hobby
+        fn getSpecie() => specie
+
+        fn aggiornaCitta(nuova) {
+            this.dati.citta = nuova
+        }
+
+        fn aggiungiHobby(nuovo) {
+            List.push(this.hobby, nuovo)
+        }
+
+        fn setA(nuovo) {
+            this.a = nuovo
+        }
+
+        # test chiamata ad altra funzione della stessa classe
+        fn descrizione() {
+            print("👤", nome, "ha", this.getEta(), "anni e vive a", this.dati.citta)
+        }
+    }
+
+    private {
+        let eta = 2025 - anno
+        let codiceSegreto = 123456
+
+        fn calcolaCodice() => this.codiceSegreto * 2
+    }
+}

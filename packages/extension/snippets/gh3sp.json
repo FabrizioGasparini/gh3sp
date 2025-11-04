@@ -26,7 +26,12 @@
     },
     "Choose Statement": {
         "prefix": "choose",
-        "body": ["choose ${1:x} {", "\tcase ${2:1}:", "\t\t$3", "\t$0", "\tdefault:", "\t\t${4:// default case}", "}"],
+        "body": ["choose ${1:x} {", "\tcase ${2:1}:", "\t\t$3", "\t$0", "\tdefault:", "\t\t${4:# default case}", "}"],
         "description": "Crea una dichiarazione choose"
+    },
+    "Class Declaration": {
+        "prefix": "class",
+        "body": ["class ${1:ClassName} {", "\tpublic {", "\t\t$0", "\t}", "\tprivate {", "\t\t${2:# private members}", "\t}", "}"],
+        "description": "Crea una dichiarazione di classe"
     }
 }

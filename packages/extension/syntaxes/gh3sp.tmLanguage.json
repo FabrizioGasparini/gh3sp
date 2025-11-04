@@ -28,7 +28,7 @@
             "patterns": [
                 {
                     "name": "keyword.control.gh3sp",
-                    "match": "(\\s+)?\\b(let|const|fn|if|else|for|while|foreach|in|not|choose|chooseall|case|default|break|continue|pass|import|export|reactive)\\b"
+                    "match": "(\\s+)?\\b(let|const|fn|if|else|for|while|foreach|in|not|choose|chooseall|case|default|break|continue|pass|import|export|reactive|class|public|private)\\b"
                 }
             ]
         },
@@ -131,6 +131,85 @@
                             "include": "#operators"
                         }
                     ]
+                }
+            ]
+        },
+        "class": {
+            "begin": "\\bclass\\b\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(?:\\(([^)]*)\\))?\\s*\\{",
+            "beginCaptures": {
+                "0": { "name": "keyword.declaration.class.gh3sp" },
+                "1": { "name": "entity.name.type.class.gh3sp" },
+                "2": { "name": "variable.parameter.class.constructor.gh3sp" }
+            },
+            "end": "\\}",
+            "endCaptures": {
+                "0": { "name": "punctuation.section.block.end.gh3sp" }
+            },
+            "name": "meta.class.gh3sp",
+            "patterns": [
+                {
+                    "include": "#comments"
+                },
+                {
+                    "begin": "\\bpublic\\b\\s*\\{",
+                    "beginCaptures": {
+                        "0": { "name": "storage.modifier.public.gh3sp" }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": { "name": "punctuation.section.block.end.public.gh3sp" }
+                    },
+                    "name": "meta.class.public.gh3sp",
+                    "patterns": [
+                        { "include": "#functions" },
+                        { "include": "#variables" },
+                        { "include": "#strings" },
+                        { "include": "#keywords" },
+                        { "include": "#numbers" },
+                        { "include": "#operators" },
+                        { "include": "#comments" }
+                    ]
+                },
+                {
+                    "begin": "\\bprivate\\b\\s*\\{",
+                    "beginCaptures": {
+                        "0": { "name": "storage.modifier.private.gh3sp" }
+                    },
+                    "end": "\\}",
+                    "endCaptures": {
+                        "0": { "name": "punctuation.section.block.end.private.gh3sp" }
+                    },
+                    "name": "meta.class.private.gh3sp",
+                    "patterns": [
+                        { "include": "#functions" },
+                        { "include": "#variables" },
+                        { "include": "#strings" },
+                        { "include": "#keywords" },
+                        { "include": "#numbers" },
+                        { "include": "#operators" },
+                        { "include": "#comments" }
+                    ]
+                },
+                {
+                    "include": "#functions"
+                },
+                {
+                    "include": "#variables"
+                },
+                {
+                    "include": "#strings"
+                },
+                {
+                    "include": "#keywords"
+                },
+                {
+                    "include": "#numbers"
+                },
+                {
+                    "include": "#operators"
+                },
+                {
+                    "include": "#comments"
                 }
             ]
         },

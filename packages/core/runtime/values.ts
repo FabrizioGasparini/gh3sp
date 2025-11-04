@@ -66,12 +66,12 @@ export function MK_OBJECT(props: Map<string, RuntimeValue>) {
 export interface ListValue extends RuntimeValue {
     type: "list";
     value: RuntimeValue[];
-    name?: string;
+    name: string | null;
 }
 
 // Returns a list value from a given array of runtime values
 export function MK_LIST(values: RuntimeValue[]) {
-    return { type: "list", value: values } as ListValue;
+    return { type: "list", value: values, name: null } as ListValue;
 }
 
 // Function Call
@@ -110,6 +110,8 @@ export interface ClassInstanceValue extends RuntimeValue {
     type: "class-instance";
     name: string;
     parameters: string[];
+    value: ObjectValue; // public members
+    privateMembers: ObjectValue; // private members
     environment: Environment;
 }
 

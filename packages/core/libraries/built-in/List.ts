@@ -16,6 +16,7 @@ const push: FunctionCall = (args: RuntimeValue[], line: number, column: number, 
 
     list.value.push(elem);
 
+    if(!list.name) return list;
     return env.assignVar(list.name!, list);
 };
 

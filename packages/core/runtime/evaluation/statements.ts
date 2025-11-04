@@ -306,7 +306,7 @@ export function evaluate_import_statement(node: ImportStatement, env: Environmen
 // Evaluates break, continue and pass statements
 export function evaluate_control_flow_statement(node: ControlFlowStatement, env: Environment): RuntimeValue {
     // Throws an error, if the given environment is not currently evaluating a loop
-    if (!env.inside_loop) throw throwError(new SyntaxError("Invalid 'break' outside loop"))
+    if (env.scopeType !== "loop") throw throwError(new SyntaxError("Invalid 'break' outside loop"))
 
     // Returns the necessary flow signal, given by the node value, by throwing it
     switch (node.value) {
@@ -360,6 +360,10 @@ export function evaluate_export_declaration(node: ExportDeclaration, env: Enviro
         case "FunctionDeclaration":
             name = (node.declaration as FunctionDeclaration).name;
             break
+        
+        case "ClassDeclaration":
+            name = (node.declaration as ClassDeclaration).name;
+            break;
     }
     
     evaluate(node.declaration, env)

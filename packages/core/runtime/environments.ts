@@ -2,7 +2,7 @@ import { built_in_libraries } from "@core/runtime/built-in/libraries.ts";
 import { built_in_functions } from "@core/runtime/built-in/functions.ts";
 import { built_in_constants } from "@core/runtime/built-in/constants.ts";
 import { evaluate, throwError } from "@core/runtime/interpreter.ts";
-import { MK_NATIVE_FUNCTION, RuntimeValue, type ReactiveValue } from "@core/runtime/values.ts";
+import { MK_NATIVE_FUNCTION, ObjectValue, RuntimeValue, type ReactiveValue } from "@core/runtime/values.ts";
 import { InterpreterError } from "@core/utils/errors_handler.ts";
 
 // Creates the global environment of the program
@@ -71,19 +71,24 @@ export default class Environment {
 
     // Assigns a new value to a given variable
     public assignVar(varname: string, value: RuntimeValue, force: boolean = false): RuntimeValue {
-        // Gets the variable which the variable is is
+        // Risolve l'ambiente in cui si trova la variabile
         const env = this.resolve(varname);
 
-        // If the assignment is not forced
         if (!force) {
-            // Throws an error if the given varname is inside the constants map
             if (env.constants.has(varname)) throw throwError(new InterpreterError(`Cannot reassign to variable '${varname}' as it was declared as a constant`));
-            // Throws an error if the given varname is of type reactive
-            if (env.variables.get(varname)?.type == "reactive") throw throwError(new InterpreterError(`Cannot reassign to variable '${varname}' as it was declared as reactive`));
+
+            if (env.variables.get(varname)?.type === "reactive") throw throwError(new InterpreterError(`Cannot reassign to variable '${varname}' as it was declared as reactive`));
+    
+            if (varname === "this") throw throwError(new InterpreterError("Cannot reassign 'this' inside a class."));
+        }
+    
+        env.variables.set(varname, value);
+
+        if (env.scopeType === "class-instance") {
+            const instanceMap = (env.variables.get("this") as ObjectValue).properties as Map<string, RuntimeValue>;
+            if (instanceMap.has(varname)) instanceMap.set(varname, value);   
         }
 
-        // Sets the new given value to the given variable
-        env.variables.set(varname, value);
         return value;
     }
 
