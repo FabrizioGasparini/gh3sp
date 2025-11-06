@@ -89,6 +89,7 @@ export function evaluate_class_declaration(declaration: ClassDeclaration, env: E
         name: declaration.name,
         parameters: declaration.parameters,
         blocks: declaration.blocks,
+        init: declaration.init ? evaluate(declaration.init as FunctionDeclaration, env) : null,
     } as ClassValue;
     
     // If the functions has a name (standard function), it adds it to the environment and returns it, otherwise it just returns it (anonymous function)

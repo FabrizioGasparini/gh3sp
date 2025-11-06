@@ -26,6 +26,7 @@ export enum TokenType {
     Class,
     Public,
     Private,
+    Init,
 
     // Control Flow
     Break,
@@ -97,6 +98,7 @@ const KEYWORDS: Record<string, TokenType> = {
     class: TokenType.Class,
     public: TokenType.Public,
     private: TokenType.Private,
+    init: TokenType.Init,
 
     break: TokenType.Break,
     continue: TokenType.Continue,

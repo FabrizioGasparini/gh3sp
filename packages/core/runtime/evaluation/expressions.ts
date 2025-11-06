@@ -568,16 +568,19 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
         
         const instanceEnv = new Environment(env);
         instanceEnv.scopeType = "class-instance";
-        cls.parameters.forEach((param, index) => {
-            const arg = args[index] ? args[index] : MK_NULL();
-            instanceEnv.declareVar(param, arg, false);
-        });
-
         // Initializes the instance object properties and methods
         const instance = new Map<string, RuntimeValue>();
         const privateMembers = new Map<string, RuntimeValue>();
 
-        let objThis = MK_OBJECT(new Map([...instance, ...privateMembers]));
+        const parameters: Map<string, RuntimeValue> = new Map();
+
+        cls.parameters.forEach((param, index) => {
+            const arg = args[index] ? args[index] : MK_NULL();
+            instanceEnv.declareVar(param, arg, false);
+            parameters.set(param, arg);
+        });
+
+        let objThis = MK_OBJECT(new Map());
         instanceEnv.declareVar("this", objThis, true);        
 
         for (const member of cls.blocks.body) {
@@ -652,8 +655,16 @@ export function evaluate_call_expression(call: CallExpression, env: Environment)
             }
         }
 
-        objThis = MK_OBJECT(new Map([...instance, ...privateMembers]));
+        objThis = MK_OBJECT(new Map([...parameters, ...instance, ...privateMembers]));
         instanceEnv.assignVar("this", objThis, true);
+
+        // If an init method is defined, calls it
+        if (cls.init) {
+            const initFunc = cls.init as FunctionValue;
+            if(initFunc.parameters.length != 0) throw throwError(new InterpreterError("Class initializer 'init' cannot have parameters"))
+
+            initFunc.body.forEach(stmt => evaluate(stmt, instanceEnv));
+        }
 
         return {
             type: "class-instance",

@@ -96,7 +96,6 @@ export interface FunctionValue extends RuntimeValue {
     expectedArgs: number;
     declarationEnv: Environment;
     body: Statement[];
-    boundThis: ClassInstanceValue | null;
 }
 
 export interface ClassValue extends RuntimeValue {
@@ -104,6 +103,7 @@ export interface ClassValue extends RuntimeValue {
     name: string;
     parameters: string[];
     blocks: Record<string, Statement[]>;
+    init: FunctionValue | null;
 }
 
 export interface ClassInstanceValue extends RuntimeValue {

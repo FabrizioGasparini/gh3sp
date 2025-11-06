@@ -66,7 +66,8 @@ export interface ClassDeclaration extends Statement {
     kind: "ClassDeclaration";
     name: string;
     parameters: string[];
-    blocks: Record<string,Statement[]>;
+    blocks: Record<string, Statement[]>;
+    init: FunctionDeclaration | null;
 }
 
 export interface IfStatement extends Statement {

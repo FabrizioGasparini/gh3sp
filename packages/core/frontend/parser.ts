@@ -321,8 +321,12 @@ export default class Parser {
 
         const blocks: Record<string, Statement[]> = { body: [], public: [], private: [] };
         let currentBlock = "private"; // Default block
+        let initFunction = null;
+            
         // Leggiamo il corpo della classe
         while (this.not_eof() && this.at().type !== TokenType.CloseBrace) {
+            if (this.at().type === TokenType.Init) initFunction = this.parse_class_initializer();
+        
             if (this.at().type === TokenType.Private || this.at().type === TokenType.Public) {
                 currentBlock = this.eat().value;
                 this.expect(TokenType.OpenBrace, `Expected '{' after ${currentBlock} block`);
@@ -344,7 +348,8 @@ export default class Parser {
             kind: "ClassDeclaration",
             name,
             parameters,
-            blocks
+            blocks,
+            init: (initFunction as FunctionDeclaration) || null,
         } as ClassDeclaration;
     }
 
@@ -374,6 +379,63 @@ export default class Parser {
         }
 
         throw this.throwError(new ParserError("Unexpected token in class body: " + this.at().value, this.at().type));
+    }
+
+    private parse_class_initializer(): Statement {
+        this.eat(); // Go past 'init' keyword
+
+        const args = this.parse_args();
+        // Defines a list of parameters names
+        const parameters: string[] = [];
+        for (const arg of args) {
+            // Throws an error if the current argument is not of type 'Identifier'
+            if (arg.kind != "Identifier") this.throwError(new SyntaxError("Expected string parameters inside of class declaration. " + arg));
+
+            // Adds the found parameters name to the parameters list
+            parameters.push((arg as Identifier).symbol);
+        }
+
+        // Declares the list of statements found in body
+        const body: Statement[] = [];
+        if (this.at().type == TokenType.OpenBrace) {
+            // Eat the '{' token
+            this.eat();
+
+            // While the body is not closed
+            while (this.at().type != TokenType.CloseBrace) {
+                // Skips all the empty lines
+                while (this.isEndOfLine()) this.skipNewLine();
+                
+                // If it's at the end of the body, breaks out of the loop
+                if (this.at().type == TokenType.CloseBrace) break;
+                
+                // Pushes the parsed statement to the function body's list
+                body.push(this.parse_statement());
+            }
+            // Expects a '}' token after the function body
+            this.expect(TokenType.CloseBrace, "Expected '}' at the end of for block");
+        }
+        // If it's an in-line function
+        else if (this.at().type == TokenType.ArrowOperator) {
+            // Eat the '=>' token
+            this.eat();
+            // Pushes the parsed statement to the function body's list
+            body.push(this.parse_statement());
+        }
+        // Throws an error if the function declaration isn't followed by a '{' or a '=>' token
+        else this.throwError(new SyntaxError("Expected '{' of '=>' after function declaration"))
+
+        const fn = {
+            kind: "FunctionDeclaration",
+            name: "init",
+            parameters,
+            expectedArgs: args.length,
+            body,
+            line: this.currentLine,
+            column: this.currentColumn,
+        } as FunctionDeclaration;
+
+        return fn;
     }
 
     // Returns an if statement
