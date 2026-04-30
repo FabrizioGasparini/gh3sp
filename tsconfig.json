@@ -6,6 +6,8 @@
     "rootDir": "./packages",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
     "paths": {
       "@/*": ["./packages/*"],
       "@core/*": ["./packages/core/*"],
@@ -20,5 +22,6 @@
     "test-libraries",
     "gh3sp-ide",
     "gh3sp-ext",
+    "packages/extension",
   ],
 }
