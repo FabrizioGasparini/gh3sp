@@ -1,226 +1,288 @@
-# Gh3sp - Linguaggio di Programmazione
+# Gh3sp — Linguaggio di programmazione
 
-**Gh3sp** è un linguaggio di programmazione progettato per essere semplice, intuitivo e flessibile. Nasce con l'obiettivo di fornire una sintassi chiara e strumenti efficaci per la scrittura di codice, ispirandosi a diversi concetti di linguaggi moderni ma con la propria personalità e specifiche caratteristiche.
+Gh3sp è un linguaggio interpretato, dinamico e progettato per essere semplice da leggere, estendere e integrare. Offre una sintassi espressiva per il lavoro quotidiano (script, prototipi, tooling) e strumenti per estendere il runtime tramite librerie native.
 
-## Caratteristiche Principali
+Questo documento descrive in modo completo e professionale le funzionalità attualmente presenti nel linguaggio e come usarle.
 
-### 1. Dichiarazioni di Variabili
-Le variabili possono essere dichiarate con le parole chiave 'let' e 'const'. I punti e virgola sono obbligatori solo per dichiarazioni di variabili senza assegnazione (e.g. 'let i;').
+---
 
-Esempi:
+Indice
+- Panoramica
+- Requisiti e avvio rapido
+- Sintassi di base
+  - Commenti e spazio bianco
+  - Tipi di valore
+  - Dichiarazioni di variabili
+  - Operatori e assegnazioni composte
+- Strutture di controllo
+  - If / else
+  - Cicli: while, for, foreach
+  - Choose / case (switch-like)
+- Funzioni
+  - Dichiarazione (block / inline)
+  - Chiusure e ambiente di dichiarazione
+- Oggetti e liste
+  - Oggetti: creazione, accesso (dot / computed)
+  - Liste: indicizzazione, operazioni e funzioni built-in
+- Classi e istanze
+  - Dichiarazione di classi, blocchi public/private, init
+  - `this` e visibilità dei membri
+  - Costruttori e parametri
+- Moduli e librerie
+  - Import / Export
+  - Librerie built-in principali
+  - Come creare librerie native (helper)
+- Funzioni built-in principali
+- Errori e debug
+- Contribuire
+- Licenza
+
+---
+
+Panoramica
+---------
+Gh3sp è un linguaggio pensato per essere pratico e facilmente estendibile. L'esecuzione è interpretata dal runtime incluso nel repository: il codice è analizzato dal lexer/parser e valutato da un interprete che rappresenta i valori con un sistema unificato di `RuntimeValue`.
+
+Requisiti e avvio rapido
+------------------------
+- Deno (consigliato) come runtime per l'esecuzione degli strumenti di sviluppo.
+- Per eseguire un file `.gh3` con il runner incluso:
+
+```/dev/null/README_examples.sh#L1-3
+# Esempio: esegui un file con il runner CLI
+# ( dalla root del repository )
+deno run -A packages/cli/gh3sp.ts ./script.gh3
 ```
+
+Sintassi di base
+----------------
+Commenti e spazio bianco
+- Commento su singola riga: `# commento`
+- Commento multiriga: `/* ... */`
+
+Esempio:
+```/dev/null/README_examples.gh3#L1-4
+# Questo è un commento su singola riga
+/*
+  Questo è un commento
+  su più righe
+*/
+```
+
+Tipi di valore
+- `number` (numero, intero o float)
+- `string`
+- `boolean`
+- `null`
+- `list` (array di valori runtime)
+- `object` (mappa di proprietà)
+- `function` e `native-function`
+- `class` e `class-instance`
+- `reactive` (valore reattivo che viene ricalcolato quando valutato)
+
+Dichiarazioni di variabili
+- `let` per variabili modificabili, `const` per costanti.
+- È possibile dichiarare variabili reactive con `let reactive name = expression`.
+
+```/dev/null/README_examples.gh3#L1-5
 let a = 10
-const b = 20
-let i;  // Dichiarazione senza valore assegnato
+const pi = 3.14
+let reactive e = 2.718
 ```
 
-### 2. Strutture di Controllo
+Il runtime supporta lo shadowing di variabili: è possibile dichiarare un parametro di funzione con lo stesso nome di una proprietà di classe; internamente `this` rimane il riferimento all'istanza.
 
-#### 2.1 Condizionali: 'If'
-Le strutture condizionali permettono l'esecuzione di codice in base a una condizione specifica. Gh3sp supporta sia condizionali multilinea che condizionali a linea singola (quest'ultimo richiede il ';').
+Operatori e assegnazioni composte
+- Operatori aritmetici: `+`, `-`, `*`, `/`, `%`, `^`.
+- Operatori di confronto e logici: `==`, `!=`, `<`, `>`, `<=`, `>=`, `&&`, `||`, `!`.
+- Assegnazioni composte: `+=`, `-=`, `*=`, `/=`, etc.
 
-Esempi:
-```
+Strutture di controllo
+---------------------
+If / else
+
+```/dev/null/README_examples.gh3#L1-5
 if (a > b) {
-    print("a è maggiore di b")
+    print("a > b")
 } else if (a < b) {
-    print ("a è minore di b")
+    print("a < b")
 } else {
-    print ("a è uguale a b)
+    print("a == b")
 }
-
-if (x == 10) print("x è 10");
 ```
 
-#### 2.2 Cicli: 'While', 'For' e 'Foreach'
-Gh3sp include il supporto per i cicli 'while' e 'for', con possibilità di strutture multilinea o linea singola.
+Cicli: `while`, `for`, `foreach`
 
-Esempi:
-```
-while (a < 10) {
-    a += 1
+```/dev/null/README_examples.gh3#L1-6
+while (i < 10) {
+  i += 1
 }
 
 for (let i = 0; i < 5; i += 1) {
-    print(i)
+  print(i)
 }
 
-// Struttura a linea singola (richiede il ';')
-for (let i = 0; i < 5; i += 1) print(i);
-
-let list = [0, 2, 4, 6]
-foreach (let elem in list) {
-    print(elem)
+foreach (let x in arr) {
+  print(x)
 }
 ```
 
-### 3. Funzioni
+Choose / Case (switch-like)
+- Il linguaggio include una forma `choose/case` — simile a uno switch con supporto per `default` e `chooseAll` behavior.
 
-Le funzioni in Gh3sp si definiscono con la parola chiave 'fn', seguita da parametri e corpo della funzione.
+Funzioni
+--------
+Dichiarazione di funzioni:
+- `fn name(params) { ... }` per blocchi multi-linea.
+- `fn name(params) => expr` per funzioni inline che ritornano l'espressione.
 
-Esempio:
-```
+Le funzioni sono closures: conservano l'ambiente di dichiarazione. L'implementazione ritorna l'ultimo valore valutato del corpo.
+
+```/dev/null/README_examples.gh3#L1-6
 fn add(x, y) {
-    return x + y
+  x + y
 }
 
-let sum = add(10, 5)
+fn mul(x, y) => x * y
+
+print(add(2,3))
+print(mul(3,4))
 ```
 
-### 4. Oggetti e Accesso alle Proprietà
+Oggetti e liste
+---------------
+Oggetti
+- Creazione con literal `{ key: value, ... }`.
+- Accesso tramite `obj.key` o `obj["key"]` o `obj[varContainingKey]` (identificatore calcolato).
 
-Gh3sp supporta la creazione di oggetti e l'accesso alle loro proprietà sia con la notazione a punto 'obj.key' che con la notazione a chiavi 'obj["key"]'.
+Liste
+- Literal con `[v1, v2, ...]`.
+- Accesso con indice `list[idx]` (supporta indici negativi come offset dalla fine in alcune API interne).
+- Molte funzioni utili esposte dalla libreria built-in `List` (v. sezione librerie).
 
-Esempio:
-```
-let person = {
-    name: "Fabri",
-    age: 15
-};
+Esempio
+```/dev/null/README_examples.gh3#L1-8
+let person = { name: "Fabrizio", age: 25 }
+print(person.name)
+print(person["age"])
 
-print(person.name)         // Accesso con notazione a punto
-print(person["age"])       // Accesso con notazione a chiavi
-```
-
-### 5. Assegnazioni Complicate (Compound Assignment)
-
-Gh3sp include supporto per le operazioni di assegnazione composta come '+=', '-=', '*=', '/=', ecc.
-
-Esempio:
-```
-a += 5  // Equivalente a: a = a + 5
+let nums = [1,2,3]
+print(nums[1])
 ```
 
-### 6. Stringhe
+Classi e istanze
+----------------
+Gh3sp include una costruzione `class` completa con blocchi `public` e `private` e un initializer `init` opzionale. La sintassi di base è:
 
-Le stringhe sono supportate e possono essere concatenate o manipolate con facilità.
+```/dev/null/README_examples.gh3#L1-16
+export class Persona(nome, anno, indirizzoIniziale) {
+    # variabili "di classe" / private al corpo
+    let specie = "Homo Sapiens"
 
-Esempio:
-```
-let greeting = "Ciao, " + name
-```
+    public {
+        let reactive eta = 2025 - anno
+        fn setAnno(anno) { this.anno = anno }
+        fn getEta() => this.eta
+    }
 
-### 7. Liste
-- **Dichiarazione di Liste**: Ora è possibile dichiarare una lista utilizzando la sintassi `list = [value, ...]`.
-  - Esempio:
-    ```gh3sp
-    let myList = [1, 2, 3, 4]
-    ```
-- **Stampa delle Liste**: È possibile stampare una lista o accedere ai suoi elementi tramite indice.
-  - Esempio:
-    ```gh3sp
-    let myList = [1, 2, 3, 4]
-    print(myList)  // Output: [1, 2, 3, 4]
-    print(myList[2])  // Output: 3
-    ```
-- **Restituzione di Valori da Liste**: È possibile accedere ai valori della lista tramite il loro indice.
-- **Assegnazione di Valori a Liste**: È possibile modificare i valori di una lista tramite l'indice.
-  - Esempio:
-    ```gh3sp
-    let myList = [1, 2, 3, 4]
-    myList[1] = 5
-    print(myList)  // Output: [1, 5, 3, 4]
-    ```
-- **Concatenazione di Liste**: Ora è possibile concatenare due liste utilizzando l'operatore `+`.
-  - Esempio:
-    ```gh3sp
-    let list_a = [1, 2]
-    let list_b = [3, 4]
-    let list_c = list_a + list_b
-    print(list_c)  // Output: [1, 2, 3, 4]
-    ```
-- **Funzioni delle Liste**: Aggiunte diverse funzioni built-in per la manipolazione delle liste:
-  - `push(list, value)`: Aggiunge un valore alla fine della lista.
-    ```gh3sp
-    let myList = [1, 5, 3, 4]
-    push(myList, 6)  // Risultato: [1, 5, 3, 4, 6]
-    ```
-  - `pop(list)`: Rimuove e restituisce l'ultimo valore della lista.
-    ```gh3sp
-    let myList = [1, 5, 3, 4, 6]
-    let lastValue = pop(myList)  // Output: 6, myList: [1, 5, 3, 4]
-    ```
-  - `shift(list)`: Rimuove e restituisce il primo valore della lista.
-    ```gh3sp
-    let myList = [1, 5, 3, 4]
-    let firstValue = shift(myList)  // Output: 1, myList: [5, 3, 4]
-    ```
-  - `unshift(list, value)`: Aggiunge un valore all'inizio della lista.
-    ```gh3sp
-    let myList = [5, 3, 4]
-    unshift(myList, 10)  // Risultato: [10, 5, 3, 4]
-    ```
-  - `slice(list, start, end?)`: Restituisce una porzione della lista.
-    ```gh3sp
-    let myList = [10, 5, 3, 4]
-    let sublist = slice(myList, 1, 3)  // Output: [5, 3]
-    ```
-  - `contains(list, value)`: Verifica se un valore è presente nella lista.
-    ```gh3sp
-    let myList = [10, 5, 3, 4]
-    let exists = contains(myList, 5)  // Output: true
-    ```
-  - `reverse(list)`: Inverte l'ordine degli elementi nella lista.
-    ```gh3sp
-    let myList = [10, 5, 3, 4]
-    reverse(myList)  // Risultato: [4, 3, 5, 10]
-    ```
-  - `filter(list, function)`: Filtra i valori della lista in base a una funzione.
-    ```gh3sp
-    let myList = [4, 3, 5, 10]
-    let filtered = filter(myList, fn(x) { x > 3 })  // Output: [4, 5, 10]
-    ```
-  - `map(list, function)`: Applica una funzione a tutti gli elementi della lista.
-    ```gh3sp
-    let myList = [4, 3, 5, 10]
-    let mapped = map(myList, fn(x) { x * 2 })  // Output: [8, 6, 10, 20]
-    ```
-  - `sort(list, inverted?)`: Ordina gli elementi della lista.
-    ```gh3sp
-    let myList = [4, 3, 5, 10]
-    sort(myList)  // Output: [3, 4, 5, 10]
-    sort(myList, true)  // Output: [10, 5, 4, 3]
-    ```
-### 8. Funzioni Built-In
-
-Gh3sp include diverse funzioni built-in utili per operazioni comuni, tra cui:
-- 'print(...)': Stampa il valore nella console.
-- 'input(value)': Legge un valore dalla console.
-- 'int(value)': Converte un valore in numero intero.
-- 'str(value)': Converte un valore in stringa.
-- 'type(value)': Restituisce il tipo del valore passato.
-- 'length(value)': Restiutisce la lunghezza di una variabile
-
-Esempio:
-```
-print("Il tipo di '10' è: " + type(10))
-length(10)
-```
-
-### 9. Dichiarazione di Funzioni
-Le funzioni possono ora essere dichiarate in questo modo:
-```
-let function = fn(args) { body }
-```
-
-### 10. Accesso agli Oggetti tramite Identificatori Calcolati
-Gh3sp supporta l'accesso agli oggetti tramite identificatori calcolati:
-```
-let obj = {
-    ciao: "hello"
+    private {
+        let codiceSegreto = 123456
+    }
 }
-
-let ident = "ciao"
-
-obj[ident]
 ```
 
-## Contributo
+Caratteristiche principali delle classi:
+- Parametri di costruttore dichiarati alla definizione `class Nome(params)`.
+- Blocchi `public`, `private` e `body` (default) per separare visibilità e comportamento.
+- `init` (se presente) è una funzione eseguita all'istanziazione.
+- `this` è un riferimento diretto all'oggetto istanza — non una copia. Assegnare `this.x` aggiorna direttamente l'istanza.
+- I membri privati vengono mantenuti in una mappa separata (`privateMembers`) e non sono esposti come proprietà pubbliche.
 
-Questo linguaggio è in continua evoluzione e miglioramento. Sei invitato a contribuire con idee, suggerimenti e segnalazioni di bug tramite il repository GitHub ufficiale.
+Moduli e librerie
+-----------------
+Import
+- Supportato l'import da file `.gh3` e dalle librerie precompilate. Esempi:
 
-## Licenza
+```/dev/null/README_examples.gh3#L1-4
+import "Persona.gh3" as P
+let p = P.Persona("Fabrizio", 2008, "Correggio")
+```
 
+- Supporta anche l'import selettivo: `import { a, b } from "file.gh3"`.
+
+Librerie built-in
+- Il runtime include librerie native già pronte, tra cui:
+  - `Math` (costanti e funzioni matematiche)
+  - `Random` (numeri casuali, `rand`, `pick`)
+  - `JSON` (`parse`, `stringify`)
+  - `List` (push, pop, shift, unshift, slice, contains, reverse, filter, map, sort)
+  - `String` (join, upper, lower, split)
+  - `Object` (keys, values)
+  - `Utils` (clone, deepEqual, range, sum, unique, flatten, merge, reduce)
+  - esempi / helper: `MyMath`
+
+Creare librerie native
+- Per sviluppare librerie native in TypeScript nel runtime sono disponibili helper:
+  - `createLibrary(name, functions, constants)` — factory che costruisce la shape attesa dal loader.
+  - `func_builder.build(descriptors, handler)` — costruisce una `FunctionCall` con validazione automatica di arità e tipi (supporta parametri opzionali, default, variadics).
+  - `func_builder.simple(types, handler)` — scorciatoia per casi semplici.
+
+Esempio (library compatta)
+```/dev/null/README_examples.ts#L1-9
+import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
+import { simple } from "@core/runtime/built-in/func_builder.ts";
+import { MK_NUMBER } from "@core/runtime/values.ts";
+
+const add = simple(["number","number"], (a,b) => MK_NUMBER(a.value + b.value));
+export default createLibrary("MyMath", { add }, {});
+```
+
+Funzioni built-in principali
+---------------------------
+A livello globale sono disponibili funzioni native:
+- `print(...)` — stampa ciascun argomento in console.
+- `input(prompt?)` — legge da console e coerces in number/string/bool.
+- `int(s)` / `float(s)` — conversioni numeriche.
+- `str(value)` — conversione a stringa (serializzazione runtime value-aware).
+- `type(value)` — restituisce il tipo runtime.
+- `length(value)` — lunghezza per stringhe, liste e oggetti.
+- `time()` — timestamp in millisecondi.
+- `unreactive(reactiveValue)` — disattiva la reattività e assegna il valore reale in ambiente.
+
+Errori e comportamento a runtime
+--------------------------------
+- Il sistema produce eccezioni specifiche con informazioni di linea/colonna: `ParserError`, `InterpreterError`, `LexerError`, `MathError`, `ImportError`.
+- L'handler degli errori (`handleError`) stampa una traccia leggibile e termina l'esecuzione con code 1.
+
+Architettura del runtime (breve)
+--------------------------------
+- Frontend: `lexer` e `parser` producono un AST.
+- Valutatore: `interpreter` che esegue l'AST su un `Environment` (catena di scope) e usa tipi unificati `RuntimeValue`.
+- Tipi principali definito in `packages/core/runtime/values.ts`.
+- Le librerie native vengono caricate tramite `compileLibrary` (su `packages/core/libraries/index.ts`) e aggiunte all'environment globale.
+
+Test e qualità
+--------------
+- È disponibile un file `main.gh3` di smoke-tests che esegue e verifica molte delle API built-in.
+- Eseguire i test manualmente con il runner CLI (vedi sezione Avvio rapido).
+
+Contribuire
+-----------
+- Segnala problemi, bug e richieste di feature sul repository GitHub.
+- Per implementare nuove librerie native, usa `createLibrary` + `func_builder` e registra la libreria nel loader (`packages/core/runtime/built-in/libraries.ts`).
+- Mantieni i test in `main.gh3` aggiornati quando aggiungi API pubbliche.
+
+Licenza
+-------
 Gh3sp è rilasciato sotto licenza MIT.
 
-Repository GitHub: [Gh3sp su GitHub](https://github.com/FabrizioGasparini/gh3sp)
+Repository: https://github.com/FabrizioGasparini/gh3sp
+
+---
+
+Se vuoi, posso:
+- generare automaticamente uno script `tools/run_gh3_tests.ts` che esegue tutti i .gh3 di test;
+- aggiungere `simpleNative` wrapper (per scrivere handler JS che ricevono valori JS nativi invece di `RuntimeValue`);
+- produrre una guida rapida per la scrittura di librerie native con esempi reali.
+
+Dimmi quale di questi preferisci e procedo.

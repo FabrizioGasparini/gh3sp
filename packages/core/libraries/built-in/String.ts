@@ -1,39 +1,56 @@
-import { MK_STRING, RuntimeValue, type FunctionCall } from "@core/runtime/values.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
+import { build, simple } from "@core/runtime/built-in/func_builder.ts";
+import { parse } from "@core/runtime/built-in/functions.ts";
+import {
+  MK_LIST,
+  MK_STRING,
+  RuntimeValue,
+  type FunctionCall,
+  type ListValue,
+} from "@core/runtime/values.ts";
 import { handleError } from "@core/utils/errors_handler.ts";
-import { parse } from "@core/runtime/built-in/functions.ts"
 
-const join: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    let string = ""
-    args.forEach(arg => {
-        if (arg.type != "string" && arg.type != "number" && arg.type != "list" && arg.type != "reactive" && arg.type) handleError(new SyntaxError(`Invalid argument type '${arg.type}'`), line, column);
-        string += parse(arg);
-    });
-
-    return MK_STRING(string);
+function throwError(error: string, line: number, column: number) {
+  throw handleError(new SyntaxError(error), line, column);
 }
 
-const upper: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args.length != 1) throw handleError(new SyntaxError("Expected 1 argument, got " + args.length), line, column);
-    if (args[0].type != "string") throw handleError(new SyntaxError("Invalid argument type. Expected 'number', got " + args[0].type), line, column);
-
-    return MK_STRING(args[0].value.toUpperCase());
-}
-
-const lower: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args.length != 1) throw handleError(new SyntaxError("Expected 1 argument, got " + args.length), line, column);
-    if (args[0].type != "string") throw handleError(new SyntaxError("Invalid argument type. Expected 'number', got " + args[0].type), line, column);
-
-    return MK_STRING(args[0].value.toLowerCase());
-}
-
-
-export default {
-    String: {
-        functions: {
-            join,
-            upper,
-            lower
-        },
-        constants: {}
+// join(...parts)
+const join: FunctionCall = build(
+  [{ name: "parts", variadic: true, type: "any" }],
+  (args) => {
+    const parts = args[0] as ListValue;
+    let string = "";
+    for (const p of parts.value) {
+      string += parse(p);
     }
-};
+    return MK_STRING(string);
+  },
+);
+
+const upper: FunctionCall = simple(["string"], (s: RuntimeValue) => {
+  return MK_STRING(s.value.toUpperCase());
+});
+
+const lower: FunctionCall = simple(["string"], (s: RuntimeValue) => {
+  return MK_STRING(s.value.toLowerCase());
+});
+
+const split: FunctionCall = simple(
+  ["string", "string"],
+  (s: RuntimeValue, sep: RuntimeValue) => {
+    return MK_LIST(
+      s.value.split(sep.value).map((str: string) => MK_STRING(str)),
+    );
+  },
+);
+
+export default createLibrary(
+  "String",
+  {
+    join,
+    upper,
+    lower,
+    split,
+  },
+  {},
+);

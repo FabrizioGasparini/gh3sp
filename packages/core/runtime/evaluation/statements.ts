@@ -54,12 +54,13 @@ export function equals(a: RuntimeValue, b: RuntimeValue): boolean {
 }
 
 // Adds the given variable to the given environment and returns it 
-export function evaluate_variable_declaration(declaration: VariableDeclaration, env: Environment): RuntimeValue {
+export function evaluate_variable_declaration(declaration: VariableDeclaration, env: Environment): RuntimeValue {    
     const value = declaration.value
         ? declaration.reactive
             ? { type: "reactive", node: declaration.value!, name: (declaration.assignee as Identifier).symbol } as ReactiveValue
             : evaluate(declaration.value, env)
         : MK_NULL();
+
     
     // If the value is a list, the variable takes the name of the list's name 
     if (declaration.value?.kind == "ListLiteral") (value as ListValue).name = (declaration.assignee as Identifier).symbol;

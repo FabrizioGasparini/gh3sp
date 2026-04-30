@@ -1,9 +1,9 @@
-#define AppVersion "2.3.0"
+#define AppVersion "2.4.0"
 
 [Setup]
 AppName=Gh3sp
 AppVersion={#AppVersion}
-DefaultDirName={pf}\Gh3sp\{#AppVersion} 
+DefaultDirName={pf}\Gh3sp\{#AppVersion}
 DefaultGroupName=Gh3sp
 OutputDir=.
 OutputBaseFilename=gh3sp_installer

@@ -1,726 +1,1164 @@
-import { AssignmentExpression, BinaryExpression, CallExpression, ChooseExpression, CompoundAssignmentExpression, Expression, FunctionDeclaration, Identifier, ListLiteral, MemberExpression, MembershipExpression, ObjectLiteral, StringLiteral, VariableDeclaration, type LogicalExpression, type NumericLiteral, type TernaryExpression } from "@core/frontend/ast.ts";
+import {
+  AssignmentExpression,
+  BinaryExpression,
+  CallExpression,
+  ChooseExpression,
+  CompoundAssignmentExpression,
+  Expression,
+  FunctionDeclaration,
+  Identifier,
+  ListLiteral,
+  type LogicalExpression,
+  MemberExpression,
+  MembershipExpression,
+  type NumericLiteral,
+  ObjectLiteral,
+  StringLiteral,
+  type TernaryExpression,
+  VariableDeclaration,
+} from "@core/frontend/ast.ts";
 import { InterpreterError, MathError } from "@core/utils/errors_handler.ts";
 import Environment from "@core/runtime/environments.ts";
 import { evaluate, throwError } from "@core/runtime/interpreter.ts";
-import { NumberValue, RuntimeValue, MK_NULL, ObjectValue, NativeFunctionValue, BoolValue, FunctionValue, ListValue, MK_BOOL, MK_LIST, StringValue, ClassValue, ClassInstanceValue } from "@core/runtime/values.ts";
+import {
+  BoolValue,
+  ClassInstanceValue,
+  ClassValue,
+  FunctionValue,
+  ListValue,
+  MK_BOOL,
+  MK_LIST,
+  MK_NULL,
+  MK_OBJECT,
+  NativeFunctionValue,
+  NumberValue,
+  ObjectValue,
+  ReactiveValue,
+  RuntimeValue,
+  StringValue,
+} from "@core/runtime/values.ts";
 import { equals } from "@core/runtime/evaluation/statements.ts";
-import { MK_OBJECT } from "@core/runtime/values.ts";
 
 // Evaluates a numeric expression between two given 'NumberValue's and an operator and returns its result
-function evaluate_numeric_binary_expression(left: NumberValue, right: NumberValue, operator: string): NumberValue {
-    switch (operator) {
-        case "+":
-            return { value: left.value + right.value, type: "number" } as NumberValue;
+function evaluate_numeric_binary_expression(
+  left: NumberValue,
+  right: NumberValue,
+  operator: string,
+): NumberValue {
+  switch (operator) {
+    case "+":
+      return { value: left.value + right.value, type: "number" } as NumberValue;
 
-        case "-":
-            return { value: left.value - right.value, type: "number" } as NumberValue;
-             
-        case "*":
-            return { value: left.value * right.value, type: "number" } as NumberValue;
+    case "-":
+      return { value: left.value - right.value, type: "number" } as NumberValue;
 
-        case "/":
-            if (right.value === 0) throwError(new MathError("Division by zero is not allowed"));
-            return { value: left.value / right.value, type: "number" } as NumberValue;
+    case "*":
+      return { value: left.value * right.value, type: "number" } as NumberValue;
 
-        case "%":
-            return { value: left.value % right.value, type: "number" } as NumberValue;
-        
-        case "^":
-            return { value: left.value ** right.value, type: "number" } as NumberValue;
-        
-        case "//":
-            return { value: parseInt((left.value / right.value).toString()), type: "number" } as NumberValue;
-        
-        default:
-            throw throwError(new InterpreterError("Invalid binary expression operator: " + operator))
-    }
+    case "/":
+      if (right.value === 0) {
+        throwError(new MathError("Division by zero is not allowed"));
+      }
+      return { value: left.value / right.value, type: "number" } as NumberValue;
+
+    case "%":
+      return { value: left.value % right.value, type: "number" } as NumberValue;
+
+    case "^":
+      return {
+        value: left.value ** right.value,
+        type: "number",
+      } as NumberValue;
+
+    case "//":
+      return {
+        value: parseInt((left.value / right.value).toString()),
+        type: "number",
+      } as NumberValue;
+
+    default:
+      throw throwError(
+        new InterpreterError("Invalid binary expression operator: " + operator),
+      );
+  }
 }
 
 // Evaluates an expression between two given 'StringValue's and an operator and returns its result
-const evaluate_string_binary_expression = (left: StringValue, right: StringValue, operator: string): StringValue => (
-    (operator == "+")
-        ? { value: (left.value).toString() + (right.value).toString(), type: "string" } as StringValue
-        : throwError(new InterpreterError("Invalid operation between strings: '" + operator + "'"))
-)
+const evaluate_string_binary_expression = (
+  left: StringValue,
+  right: StringValue,
+  operator: string,
+): StringValue =>
+  operator == "+"
+    ? ({
+        value: left.value.toString() + right.value.toString(),
+        type: "string",
+      } as StringValue)
+    : throwError(
+        new InterpreterError(
+          "Invalid operation between strings: '" + operator + "'",
+        ),
+      );
 
 // Evaluates an expression between a given 'StringValue', a given 'NumberValue' and an operator and returns its result
-const evaluate_mixed_string_numeric_binary_expression = (string: StringValue, number: NumberValue, operator: string): StringValue => (
-    (operator == "*")
-        ? { value: string.value.repeat(number.value), type: "string" } as StringValue
-        : throwError(new InterpreterError("Invalid operation between string and number: '" + operator + "'"))
-)
+const evaluate_mixed_string_numeric_binary_expression = (
+  string: StringValue,
+  number: NumberValue,
+  operator: string,
+): StringValue =>
+  operator == "*"
+    ? ({
+        value: string.value.repeat(number.value),
+        type: "string",
+      } as StringValue)
+    : throwError(
+        new InterpreterError(
+          "Invalid operation between string and number: '" + operator + "'",
+        ),
+      );
 
 // Evaluates an expression between two given 'ListValue's and an operator and returns its result
-const evaluate_list_binary_expression = (left: ListValue, right: ListValue, operator: string): ListValue => (
-    (operator == "+")
-        ? { type: "list", value: right.value.concat(left.value) } as ListValue
-        : throwError(new InterpreterError("Invalid operation between lists : '" + operator + "' "))
-)
+const evaluate_list_binary_expression = (
+  left: ListValue,
+  right: ListValue,
+  operator: string,
+): ListValue =>
+  operator == "+"
+    ? ({ type: "list", value: right.value.concat(left.value) } as ListValue)
+    : throwError(
+        new InterpreterError(
+          "Invalid operation between lists : '" + operator + "' ",
+        ),
+      );
 
 // Evaluates an expression between two given generic 'RuntimeValue's and an operator and returns its result
-function evaluate_mixed_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): RuntimeValue {
-    switch (left.type) {
-        // If the left value is a 'NumberValue'
-        case "number": {
-            if(right.type == "number") return evaluate_numeric_binary_expression(left as NumberValue, right as NumberValue, operator);
-            else if (right.type == "string") return evaluate_mixed_string_numeric_binary_expression(right as StringValue, left as NumberValue, operator);
-            break;
-        }
-        
-        // If the left value is a 'StringValue'
-        case "string": {
-            if (right.type == "string") return evaluate_string_binary_expression(left as StringValue, right as StringValue, operator);
-            else if (right.type == "number") return evaluate_mixed_string_numeric_binary_expression(left as StringValue, right as NumberValue, operator);
-            break;
-        }
-        
-        // If the left value is a 'ListValue'
-        case "list": {
-            if (right.type == "list") return evaluate_list_binary_expression(left as ListValue, right as ListValue, operator);
-            break;
-        }
-            
-        default:
-            return MK_NULL()
-            //throw throwError(new InterpreterError("Invalid mixed expression type: " + left.type))
+function evaluate_mixed_binary_expression(
+  left: RuntimeValue,
+  right: RuntimeValue,
+  operator: string,
+): RuntimeValue {
+  switch (left.type) {
+    // If the left value is a 'NumberValue'
+    case "number": {
+      if (right.type == "number") {
+        return evaluate_numeric_binary_expression(
+          left as NumberValue,
+          right as NumberValue,
+          operator,
+        );
+      } else if (right.type == "string") {
+        return evaluate_mixed_string_numeric_binary_expression(
+          right as StringValue,
+          left as NumberValue,
+          operator,
+        );
+      }
+      break;
     }
 
-    return MK_NULL()
+    // If the left value is a 'StringValue'
+    case "string": {
+      if (right.type == "string") {
+        return evaluate_string_binary_expression(
+          left as StringValue,
+          right as StringValue,
+          operator,
+        );
+      } else if (right.type == "number") {
+        return evaluate_mixed_string_numeric_binary_expression(
+          left as StringValue,
+          right as NumberValue,
+          operator,
+        );
+      }
+      break;
+    }
+
+    // If the left value is a 'ListValue'
+    case "list": {
+      if (right.type == "list") {
+        return evaluate_list_binary_expression(
+          left as ListValue,
+          right as ListValue,
+          operator,
+        );
+      }
+      break;
+    }
+
+    default:
+      return MK_NULL();
+    //throw throwError(new InterpreterError("Invalid mixed expression type: " + left.type))
+  }
+
+  return MK_NULL();
 }
 
 // Returns 'true' if the two given lists are equal
 function compare_lists(a: RuntimeValue[], b: RuntimeValue[]): boolean {
-    if (a.length != b.length) return false;
-    
-    for (let i = 0; i < a.length - 1; i++) if (a[i].value != b[i].value) return false;
-    
-    return true;
+  if (a.length != b.length) return false;
+
+  for (let i = 0; i < a.length - 1; i++) {
+    if (a[i].value != b[i].value) return false;
+  }
+
+  return true;
 }
 
 // Evaluates a comparison expression between two given generic 'RuntimeValue's and an operator and returns its result
-function evaluate_comparison_binary_expression(left: RuntimeValue, right: RuntimeValue, operator: string): BoolValue {
+function evaluate_comparison_binary_expression(
+  left: RuntimeValue,
+  right: RuntimeValue,
+  operator: string,
+): BoolValue {
+  switch (operator) {
+    case "==":
+      if (left.type == right.type) {
+        if (left.type == "list") {
+          return MK_BOOL(compare_lists(left.value, right.value));
+        }
 
-    switch (operator) {
-        case "==":
-            if (left.type == right.type) {
-                if (left.type == "list") return MK_BOOL(compare_lists(left.value, right.value))
-                
-                return MK_BOOL(left.value == right.value);
-            }
+        return MK_BOOL(left.value == right.value);
+      }
 
-            return MK_BOOL(false)
-            
-        case "!=":
-            if (left.type == right.type) {
-                if (left.type == "list") return MK_BOOL(!compare_lists(left.value, right.value))
-                
-                return MK_BOOL(left.value != right.value);
-            }
+      return MK_BOOL(false);
 
-            return MK_BOOL(true)
+    case "!=":
+      if (left.type == right.type) {
+        if (left.type == "list") {
+          return MK_BOOL(!compare_lists(left.value, right.value));
+        }
 
-        case ">=":
-            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value >= right.value);
-            break;
+        return MK_BOOL(left.value != right.value);
+      }
 
-        case "<=":
-            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value <= right.value);
-            break;
+      return MK_BOOL(true);
 
-        case ">":
-            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value > right.value);
-            break;
+    case ">=":
+      if (
+        (left.type == "boolean" && right.type == "boolean") ||
+        (left.type == "number" && right.type == "number")
+      ) {
+        return MK_BOOL(left.value >= right.value);
+      }
+      break;
 
-        case "<":
-            if (left.type == "boolean" && right.type == "boolean" || left.type == "number" && right.type == "number") return MK_BOOL(left.value < right.value);
-            break;
+    case "<=":
+      if (
+        (left.type == "boolean" && right.type == "boolean") ||
+        (left.type == "number" && right.type == "number")
+      ) {
+        return MK_BOOL(left.value <= right.value);
+      }
+      break;
 
-        default:
-            throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'"));
-    }
+    case ">":
+      if (
+        (left.type == "boolean" && right.type == "boolean") ||
+        (left.type == "number" && right.type == "number")
+      ) {
+        return MK_BOOL(left.value > right.value);
+      }
+      break;
 
-    throw throwError(new InterpreterError("Invalid comparison operator: '" + operator + "'" + " between type '" + left.type + "' and '" + right.type + "'"));
+    case "<":
+      if (
+        (left.type == "boolean" && right.type == "boolean") ||
+        (left.type == "number" && right.type == "number")
+      ) {
+        return MK_BOOL(left.value < right.value);
+      }
+      break;
+
+    default:
+      throw throwError(
+        new InterpreterError("Invalid comparison operator: '" + operator + "'"),
+      );
+  }
+
+  throw throwError(
+    new InterpreterError(
+      "Invalid comparison operator: '" +
+        operator +
+        "'" +
+        " between type '" +
+        left.type +
+        "' and '" +
+        right.type +
+        "'",
+    ),
+  );
 }
 
 // Evaluates a 'BinaryExpression' and returns its result
-export function evaluate_binary_expression(node: BinaryExpression, env: Environment): RuntimeValue {
-    let left = evaluate(node.left, env);
-    let right = evaluate(node.right, env);
+export function evaluate_binary_expression(
+  node: BinaryExpression,
+  env: Environment,
+): RuntimeValue {
+  let left = evaluate(node.left, env);
+  let right = evaluate(node.right, env);
 
-    if(left.type == "reactive") left = left.value
-    if(right.type == "reactive") right = right.value
-    
-    if(node.negative) right.value *= -1
-    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside binary expression"));
-    
-    const op = node.operator;
-    if (op == "??") return left.type == "null" ? right : left;
+  if (left.type == "reactive") left = left.value;
+  if (right.type == "reactive") right = right.value;
 
-    const binary_operators = ["+", "-", "*", "/", "%", "^", "//"]
-    if (binary_operators.includes(op)) return evaluate_mixed_binary_expression(left, right, op);
-    
-    const comparison_operators = ["==", "!=", "<=", ">=", "<", ">"]
-    if (comparison_operators.includes(op)) return evaluate_comparison_binary_expression(left, right, op);
+  if (node.negative) right.value *= -1;
+  if (left == undefined || right == undefined) {
+    throw throwError(
+      new InterpreterError(
+        "Missing required parameter inside binary expression",
+      ),
+    );
+  }
 
-    return MK_NULL();
+  const op = node.operator;
+  if (op == "??") return left.type == "null" ? right : left;
+
+  const binary_operators = ["+", "-", "*", "/", "%", "^", "//"];
+  if (binary_operators.includes(op)) {
+    return evaluate_mixed_binary_expression(left, right, op);
+  }
+
+  const comparison_operators = ["==", "!=", "<=", ">=", "<", ">"];
+  if (comparison_operators.includes(op)) {
+    return evaluate_comparison_binary_expression(left, right, op);
+  }
+
+  return MK_NULL();
 }
 
 // Evaluates a 'MembershipExpression' and returns its result
-export function evaluate_membership_expression(node: MembershipExpression, env: Environment): RuntimeValue {
-    let left = evaluate(node.left, env) as RuntimeValue;
-    let right = evaluate(node.right, env);
+export function evaluate_membership_expression(
+  node: MembershipExpression,
+  env: Environment,
+): RuntimeValue {
+  let left = evaluate(node.left, env) as RuntimeValue;
+  let right = evaluate(node.right, env);
 
-    if(left.type == "reactive") left = left.value
-    if(right.type == "reactive") right = right.value
-    
-    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside membership expression"));
+  if (left.type == "reactive") left = left.value;
+  if (right.type == "reactive") right = right.value;
 
-    switch (right.type) {
-        case "list": {
-            let return_value = false;
+  if (left == undefined || right == undefined) {
+    throw throwError(
+      new InterpreterError(
+        "Missing required parameter inside membership expression",
+      ),
+    );
+  }
 
-            (right as ListValue).value.forEach(value => {
-                if(value.type == left.type && value.value == left.value) return_value = true
-            });
+  switch (right.type) {
+    case "list": {
+      let return_value = false;
 
-            return MK_BOOL(node.not != return_value)
+      (right as ListValue).value.forEach((value) => {
+        if (value.type == left.type && value.value == left.value) {
+          return_value = true;
         }
-            
-        case "object": {
-            if (left.type != "string") throw throwError(new InterpreterError("Invalid left parameter type in membership expression. Expected 'string' but received " + left.type))
-            const return_value: boolean = (right as ObjectValue).properties.has((left as StringValue).value);
-            return MK_BOOL(node.not != return_value)
-        }
-            
-        case "string": {
-            if (left.type != "string") throw throwError(new InterpreterError("Invalid left parameter type in membership expression. Expected 'string' but received " + left.type))
-            const return_value: boolean = (right as StringValue).value.includes((left as StringValue).value);
-            return MK_BOOL(node.not != return_value)
-        }
-            
-        default:
-            throw throwError(new InterpreterError("Invalid right parameter type in membership expression. Expected 'list', 'object' or 'string' but received " + right.type))
+      });
+
+      return MK_BOOL(node.not != return_value);
     }
 
+    case "object": {
+      if (left.type != "string") {
+        throw throwError(
+          new InterpreterError(
+            "Invalid left parameter type in membership expression. Expected 'string' but received " +
+              left.type,
+          ),
+        );
+      }
+      const return_value: boolean = (right as ObjectValue).properties.has(
+        (left as StringValue).value,
+      );
+      return MK_BOOL(node.not != return_value);
+    }
+
+    case "string": {
+      if (left.type != "string") {
+        throw throwError(
+          new InterpreterError(
+            "Invalid left parameter type in membership expression. Expected 'string' but received " +
+              left.type,
+          ),
+        );
+      }
+      const return_value: boolean = (right as StringValue).value.includes(
+        (left as StringValue).value,
+      );
+      return MK_BOOL(node.not != return_value);
+    }
+
+    default:
+      throw throwError(
+        new InterpreterError(
+          "Invalid right parameter type in membership expression. Expected 'list', 'object' or 'string' but received " +
+            right.type,
+        ),
+      );
+  }
 }
 
 // Evaluates a 'LogicalExpression' and returns its result
-export function evaluate_logical_expression(node: LogicalExpression, env: Environment): RuntimeValue {
-    const left = evaluate(node.left, env);
-    const right = evaluate(node.right, env);
+export function evaluate_logical_expression(
+  node: LogicalExpression,
+  env: Environment,
+): RuntimeValue {
+  const left = evaluate(node.left, env);
+  const right = evaluate(node.right, env);
 
-    // Throws an error if either left node or right node are undefined
-    if (left == undefined || right == undefined) throw throwError(new InterpreterError("Missing required parameter inside logical expression"));
-    
-    const op = node.operator;
-    switch (op) {
-        case "&&":
-            return MK_BOOL(left.value && right.value);
-        
-        case "||":
-            return MK_BOOL(left.value || right.value);
-        
-        case "!":
-            // Throws an error if either left node or right node are not booleans
-            if (left.type != "boolean" || right.type != "boolean") throw throwError(new InterpreterError("Invalid parameter inside logical expression. Expected boolean value."));
-            return MK_BOOL(!right.value);
-        
-        default:
-            throw throwError(new InterpreterError("Invalid logical expression operator: " + op))
-    }
+  // Throws an error if either left node or right node are undefined
+  if (left == undefined || right == undefined) {
+    throw throwError(
+      new InterpreterError(
+        "Missing required parameter inside logical expression",
+      ),
+    );
+  }
+
+  const op = node.operator;
+  switch (op) {
+    case "&&":
+      return MK_BOOL(left.value && right.value);
+
+    case "||":
+      return MK_BOOL(left.value || right.value);
+
+    case "!":
+      // Throws an error if either left node or right node are not booleans
+      if (left.type != "boolean" || right.type != "boolean") {
+        throw throwError(
+          new InterpreterError(
+            "Invalid parameter inside logical expression. Expected boolean value.",
+          ),
+        );
+      }
+      return MK_BOOL(!right.value);
+
+    default:
+      throw throwError(
+        new InterpreterError("Invalid logical expression operator: " + op),
+      );
+  }
 }
 
 // Returns a 'RuntimeValue' from a given 'Identifier'
-export const evaluate_identifier = (ident: Identifier, env: Environment): RuntimeValue => ( env.lookupVar(ident.symbol) )
+export const evaluate_identifier = (
+  ident: Identifier,
+  env: Environment,
+): RuntimeValue => env.lookupVar(ident.symbol);
 
-function get_member_expression_result(node: MemberExpression, env: Environment): RuntimeValue {
-    let object = node.object
-    if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
+function get_member_expression_result(
+  node: MemberExpression,
+  env: Environment,
+): RuntimeValue {
+  let object = node.object;
+  if (object.kind != "Identifier") {
+    while (object.kind != "Identifier") {
+      object = (object as MemberExpression).object;
+    }
+  }
 
-    return (env.lookupVar((object as Identifier).symbol) as ObjectValue)
+  return env.lookupVar((object as Identifier).symbol) as ObjectValue;
 }
 
 // Returns an 'Identifier' from a given 'MemberExpression' node
 function get_member_expression_variable(node: MemberExpression): Identifier {
-    let object = node.object
-    if (object.kind != "Identifier") while (object.kind != "Identifier") object = (object as MemberExpression).object
-    
-    return object as Identifier
+  let object = node.object;
+  if (object.kind != "Identifier") {
+    while (object.kind != "Identifier") {
+      object = (object as MemberExpression).object;
+    }
+  }
+
+  return object as Identifier;
 }
 
 // Returns an list of string properties from a given 'MemberExpression' node
 function get_object_props(node: MemberExpression): string[] {
-    let object = node.object
-    // If the member expression is computed, set the first props as a 'StringLiteral' type, else set it as an 'Identifier'
-    const props: string[] = [node.computed ? (node.property as StringLiteral).value : (node.property as Identifier).symbol]
+  let object = node.object;
+  // If the member expression is computed, set the first props as a 'StringLiteral' type, else set it as an 'Identifier'
+  const props: string[] = [
+    node.computed
+      ? (node.property as StringLiteral).value
+      : (node.property as Identifier).symbol,
+  ];
 
-    if (node.computed) {
-        if (object.kind != "Identifier")
-        {
-            while (object.kind != "Identifier") {
-                props.unshift(((object as MemberExpression).property as StringLiteral).value)
-                object = (object as MemberExpression).object
-            }
-        }
+  if (node.computed) {
+    if (object.kind != "Identifier") {
+      while (object.kind != "Identifier") {
+        props.unshift(
+          ((object as MemberExpression).property as StringLiteral).value,
+        );
+        object = (object as MemberExpression).object;
+      }
     }
-    else {        
-        if (object.kind != "Identifier")
-        {
-            while (object.kind != "Identifier") {
-                props.unshift(((object as MemberExpression).property as Identifier).symbol)
-                object = (object as MemberExpression).object
-            }
-        }
+  } else {
+    if (object.kind != "Identifier") {
+      while (object.kind != "Identifier") {
+        props.unshift(
+          ((object as MemberExpression).property as Identifier).symbol,
+        );
+        object = (object as MemberExpression).object;
+      }
     }
+  }
 
-    return props
+  return props;
 }
 
 // Evaluates an assignment expression and returns its result
-export function evaluate_assignment_expression(node: AssignmentExpression, env: Environment): RuntimeValue {
-    switch (node.assignee.kind) {
-        // a = value
-        case "Identifier":    
-            return env.assignVar((node.assignee as Identifier).symbol, evaluate(node.value, env));
-        
-        // obj[key] = value, list[idx] = value
-        case "MemberExpression": {
-            const member = node.assignee as MemberExpression 
-            
-            const expression = get_member_expression_result(member, env)
-            const variable = get_member_expression_variable(member).symbol
+export function evaluate_assignment_expression(
+  node: AssignmentExpression,
+  env: Environment,
+): RuntimeValue {
+  switch (node.assignee.kind) {
+    // a = value
+    case "Identifier":
+      return env.assignVar(
+        (node.assignee as Identifier).symbol,
+        evaluate(node.value, env),
+      );
 
-            switch (expression.type) {
-                case "list": {
-                    const idx = (member.property as NumericLiteral).value; 
-                    if (typeof idx != "number") throw throwError(new InterpreterError("Invalid list index: " + idx))
-                    
-                    expression.value[idx] = evaluate(node.value, env);
-                    
-                    return env.assignVar(variable, expression)
-                }
-                
-                case "object": {
-                    const object = expression
-                    const props = get_object_props(member)
-                    const key = props.pop()!
+    // obj[key] = value, list[idx] = value
+    case "MemberExpression": {
+      const member = node.assignee as MemberExpression;
 
-                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"))
-                        
-                    let result = object;
-                    for (const prop of props) {
-                        if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!//new_value = new_value.get(prop)
-                    }
-                        
-                    if (!(result as ObjectValue).properties.has(key)) {
-                        // Here the "invalid" keys can be handled, like creating a new key if the given one is not found inside the object
-                        //throw throwError(new InterpreterError("Invalid object key (not found)"))
-                    }
-                    
-                    (result as ObjectValue).properties.set(key, evaluate(node.value, env))
-                    if (variable == "this") return object
-                    
-                    return env.assignVar(variable, object)
-                }
-                    
-                case "class-instance": {
-                    const instance = expression as ClassInstanceValue;
-                    const props = get_object_props(member);
-                    const key = props.pop()!;
-                    if (!key) throw throwError(new InterpreterError("Invalid object key (not found)"));
+      const expression = get_member_expression_result(member, env);
+      const variable = get_member_expression_variable(member).symbol;
 
-                    let current: RuntimeValue = instance;
+      switch (expression.type) {
+        case "list": {
+          const idx = (member.property as NumericLiteral).value;
+          if (typeof idx != "number") {
+            throw throwError(
+              new InterpreterError("Invalid list index: " + idx),
+            );
+          }
 
-                    for (const prop of props) {
-                        if (current.type === "class-instance") {
-                            const classVal = current as ClassInstanceValue;
-                            if (!classVal.value.properties.has(prop)) {
-                                throw throwError(new InterpreterError(`Property '${prop}' not found in class instance.`));
-                            }
-                            current = classVal.value.properties.get(prop)!;
-                        } else if (current.type === "object") {
-                            const objVal = current as ObjectValue;
-                            if (!objVal.properties.has(prop)) {
-                                throw throwError(new InterpreterError(`Property '${prop}' not found in object.`));
-                            }
-                            current = objVal.properties.get(prop)!;
-                        } else {
-                            throw throwError(new InterpreterError(`Cannot access property '${prop}' of non-object type.`));
-                        }
-                    }
+          expression.value[idx] = evaluate(node.value, env);
 
-                    const valueToSet = evaluate(node.value, env);
-
-                    if (current.type === "class-instance") {
-                        const targetClass = current as ClassInstanceValue;
-                        if (!targetClass.value.properties.has(key)) {
-                            throw throwError(new InterpreterError(`Invalid property '${key}' in class instance.`));
-                        }
-
-                        // Aggiorna la proprietà pubblica
-                        targetClass.value.properties.set(key, valueToSet);
-
-                        // Sincronizza anche l’ambiente dell’istanza (this.a, this.b, ecc.)
-                        targetClass.environment.assignVar(key, valueToSet, true);
-                    }
-
-                    else if (current.type === "object") {
-                        const targetObj = current as ObjectValue;
-                        targetObj.properties.set(key, valueToSet);
-                    }
-
-                    // Non riassegnare "this"
-                    if (variable === "this") return instance;
-                    return env.assignVar(variable, instance);
-                }
-
-                default:
-                    throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
-            }
+          return env.assignVar(variable, expression);
         }
-        
+
+        case "object": {
+          const object = expression;
+          const props = get_object_props(member);
+          const key = props.pop()!;
+
+          if (!key) {
+            throw throwError(
+              new InterpreterError("Invalid object key (not found)"),
+            );
+          }
+
+          let result = object;
+          for (const prop of props) {
+            if ((result as ObjectValue).properties.has(prop)) {
+              result = (result as ObjectValue).properties.get(prop)!; //new_value = new_value.get(prop)
+            }
+          }
+
+          if (!(result as ObjectValue).properties.has(key)) {
+            // Here the "invalid" keys can be handled, like creating a new key if the given one is not found inside the object
+            //throw throwError(new InterpreterError("Invalid object key (not found)"))
+          }
+
+          (result as ObjectValue).properties.set(
+            key,
+            evaluate(node.value, env),
+          );
+          if (variable == "this") return object;
+
+          return env.assignVar(variable, object);
+        }
+
+        case "class-instance": {
+          const instance = expression as ClassInstanceValue;
+          const props = get_object_props(member);
+          const key = props.pop()!;
+          if (!key) {
+            throw throwError(
+              new InterpreterError("Invalid object key (not found)"),
+            );
+          }
+
+          let current: RuntimeValue = instance;
+          for (const prop of props) {
+            if (current.type === "class-instance") {
+              const classVal = current as ClassInstanceValue;
+              if (!classVal.value.properties.has(prop)) {
+                throw throwError(
+                  new InterpreterError(
+                    `Property '${prop}' not found in class instance.`,
+                  ),
+                );
+              }
+              current = classVal.value.properties.get(prop)!;
+            } else if (current.type === "object") {
+              const objVal = current as ObjectValue;
+              if (!objVal.properties.has(prop)) {
+                throw throwError(
+                  new InterpreterError(
+                    `Property '${prop}' not found in object.`,
+                  ),
+                );
+              }
+              current = objVal.properties.get(prop)!;
+            } else {
+              throw throwError(
+                new InterpreterError(
+                  `Cannot access property '${prop}' of non-object type.`,
+                ),
+              );
+            }
+          }
+
+          const valueToSet = evaluate(node.value, env);
+
+          if (current.type === "class-instance") {
+            const targetClass = current as ClassInstanceValue;
+
+            // Check if it's a public property
+            if (targetClass.value.properties.has(key)) {
+              // Aggiorna la proprietà pubblica
+              targetClass.value.properties.set(key, valueToSet);
+            } else if (targetClass.privateMembers.properties.has(key)) {
+              // Aggiorna la proprietà privata
+              targetClass.privateMembers.properties.set(key, valueToSet);
+            } else if (targetClass.environment.variables.has(key)) {
+              // E.g. Parameter
+            } else {
+              throw throwError(
+                new InterpreterError(
+                  `Invalid property '${key}' in class instance.`,
+                ),
+              );
+            }
+
+            // Sincronizza anche l’ambiente dell’istanza (this.a, this.b, ecc.)
+            targetClass.environment.assignVar(key, valueToSet, true);
+          } else if (current.type === "object") {
+            const targetObj = current as ObjectValue;
+            targetObj.properties.set(key, valueToSet);
+          }
+
+          // Non riassegnare "this"
+          if (variable === "this") return instance;
+          return env.assignVar(variable, instance);
+        }
+
         default:
-            throw throwError(new InterpreterError("Invalid assignment expression " + JSON.stringify(node.assignee)));
+          throw throwError(
+            new InterpreterError(
+              "Invalid assignment expression " + JSON.stringify(node.assignee),
+            ),
+          );
+      }
     }
+
+    default:
+      throw throwError(
+        new InterpreterError(
+          "Invalid assignment expression " + JSON.stringify(node.assignee),
+        ),
+      );
+  }
 }
 
 // Evaluates a compound assignment expression and returns its result
-export function evaluate_compound_assignment_expression(node: CompoundAssignmentExpression, env: Environment): RuntimeValue {
-    const op = node.operator.substring(0, node.operator.length - 1);
-    
-    switch (node.assignee.kind) {
-        case "MemberExpression": {
-            const member = node.assignee as MemberExpression
-            const expression = get_member_expression_result(member, env)
-            const variable = get_member_expression_variable(member).symbol
-            const props = get_object_props(member)
-            const key = props.pop()!
+export function evaluate_compound_assignment_expression(
+  node: CompoundAssignmentExpression,
+  env: Environment,
+): RuntimeValue {
+  const op = node.operator.substring(0, node.operator.length - 1);
 
-            if (!key) throw throwError(new InterpreterError("Invalid object key"))
-                
-            let result = expression;
-            for (const prop of props) {
-                if((result as ObjectValue).properties.has(prop)) result = (result as ObjectValue).properties.get(prop)!
-            }
-                
-            const new_value = evaluate(node.value, env);
+  switch (node.assignee.kind) {
+    case "MemberExpression": {
+      const member = node.assignee as MemberExpression;
+      const expression = get_member_expression_result(member, env);
+      const variable = get_member_expression_variable(member).symbol;
+      const props = get_object_props(member);
+      const key = props.pop()!;
 
-            switch (result.type)
-            {
-                case "object": {
-                    if (!(result as ObjectValue).properties.has(key)) {
-                        if (op == "??") {
-                            (result as ObjectValue).properties.set(key, new_value)
-                            
-                            return env.assignVar(variable, expression)
-                        }
-    
-                        throw throwError(new InterpreterError("Invalid object key (not found)"))
-                    }
-                    
-                    const current_value = (result as ObjectValue).properties.get(key)!
-                    if (op == "??") {
-                        if (current_value.type == "null") {
-                            (result as ObjectValue).properties.set(key, new_value)
-                            
-                            return env.assignVar(variable, expression)
-                        }
-                        
-                        return expression
-                    }
-                    
-                    const value = evaluate_mixed_binary_expression(current_value, new_value, op);
-                    (result as ObjectValue).properties.set(key, value)
-                    return env.assignVar(variable, expression)
-                }
-                    
-                case "list": {
-                    const idx = (member.property as NumericLiteral).value; 
-                    if (typeof idx != "number") throw throwError(new InterpreterError("Invalid list index: " + idx))
-                    
-                    const current_value = expression.value[idx];
-                    const new_value = evaluate(node.value, env)
-                    expression.value[idx] = evaluate_mixed_binary_expression(current_value, new_value, op);
-                    
-                    return env.assignVar(variable, expression)
-                }
-                    
-                default:
-                    throw throwError(new InterpreterError("Invalid compound assignment"))
+      if (!key) throw throwError(new InterpreterError("Invalid object key"));
+
+      let result = expression;
+      for (const prop of props) {
+        if ((result as ObjectValue).properties.has(prop)) {
+          result = (result as ObjectValue).properties.get(prop)!;
+        }
+      }
+
+      const new_value = evaluate(node.value, env);
+
+      switch (result.type) {
+        case "object": {
+          if (!(result as ObjectValue).properties.has(key)) {
+            if (op == "??") {
+              (result as ObjectValue).properties.set(key, new_value);
+
+              return env.assignVar(variable, expression);
             }
+
+            throw throwError(
+              new InterpreterError("Invalid object key (not found)"),
+            );
+          }
+
+          const current_value = (result as ObjectValue).properties.get(key)!;
+          if (op == "??") {
+            if (current_value.type == "null") {
+              (result as ObjectValue).properties.set(key, new_value);
+
+              return env.assignVar(variable, expression);
+            }
+
+            return expression;
+          }
+
+          const value = evaluate_mixed_binary_expression(
+            current_value,
+            new_value,
+            op,
+          );
+          (result as ObjectValue).properties.set(key, value);
+          return env.assignVar(variable, expression);
         }
-            
-        case "Identifier": {
-            const varname = (node.assignee as Identifier).symbol;
-            const current_value = env.lookupVar(varname);
-        
-            const value = evaluate(node.value, env);
-                
-            if(op == "??") if(current_value.type == "null") return env.assignVar(varname, value)
-        
-            const new_value = evaluate_mixed_binary_expression(current_value, value, op);
-        
-            return env.assignVar(varname, new_value);
+
+        case "list": {
+          const idx = (member.property as NumericLiteral).value;
+          if (typeof idx != "number") {
+            throw throwError(
+              new InterpreterError("Invalid list index: " + idx),
+            );
+          }
+
+          const current_value = expression.value[idx];
+          const new_value = evaluate(node.value, env);
+          expression.value[idx] = evaluate_mixed_binary_expression(
+            current_value,
+            new_value,
+            op,
+          );
+
+          return env.assignVar(variable, expression);
         }
+
         default:
-            throw throwError(new InterpreterError("Invalid compound assignment expression " + JSON.stringify(node.assignee)));
+          throw throwError(new InterpreterError("Invalid compound assignment"));
+      }
     }
-    
-    
+
+    case "Identifier": {
+      const varname = (node.assignee as Identifier).symbol;
+      const current_value = env.lookupVar(varname);
+
+      const value = evaluate(node.value, env);
+
+      if (op == "??") {
+        if (current_value.type == "null") return env.assignVar(varname, value);
+      }
+
+      const new_value = evaluate_mixed_binary_expression(
+        current_value,
+        value,
+        op,
+      );
+
+      return env.assignVar(varname, new_value);
+    }
+    default:
+      throw throwError(
+        new InterpreterError(
+          "Invalid compound assignment expression " +
+            JSON.stringify(node.assignee),
+        ),
+      );
+  }
 }
 
 // Evaluates an object expression and returns its result
-export function evaluate_object_expression(obj: ObjectLiteral, env: Environment): RuntimeValue {
-    const object = { type: "object", properties: new Map(), native: false } as ObjectValue;
-    for (const { key, value } of obj.properties) {
-        const runtimeVal = value == undefined ? env.lookupVar(key) : evaluate(value, env);
+export function evaluate_object_expression(
+  obj: ObjectLiteral,
+  env: Environment,
+): RuntimeValue {
+  const object = {
+    type: "object",
+    properties: new Map(),
+    native: false,
+  } as ObjectValue;
+  for (const { key, value } of obj.properties) {
+    const runtimeVal =
+      value == undefined ? env.lookupVar(key) : evaluate(value, env);
 
-        object.properties.set(key, runtimeVal);
-    }
+    object.properties.set(key, runtimeVal);
+  }
 
-    return object;
+  return object;
 }
 
 // Evaluates a member expression and returns its result
-export function evaluate_member_expression(member: MemberExpression, env: Environment): RuntimeValue {
-    const object = evaluate(member.object, env);
-    
-    switch (object.type) {
-        case "object": {
-            const obj = object as ObjectValue
-            if (member.computed && obj.native) throw throwError(new InterpreterError('Invalid native object key access'))
-            
-            const key = get_object_props(member).pop()!;
-            if (!key)
-                throw throwError(new InterpreterError('Invalid object key access: ' + member.property.kind));
-            
-            if(!obj.properties.has(key))
-                return MK_NULL()
+export function evaluate_member_expression(
+  member: MemberExpression,
+  env: Environment,
+): RuntimeValue {
+  const object = evaluate(member.object, env);
 
-            return obj.properties.get(key)!
-        }
-            
-        case "list": {
-            if (!member.computed) throw throwError(new InterpreterError("Invalid list access. Expected computed access"));
+  switch (object.type) {
+    case "object": {
+      const obj = object as ObjectValue;
+      if (member.computed && obj.native) {
+        throw throwError(
+          new InterpreterError("Invalid native object key access"),
+        );
+      }
 
-            const list = object as ListValue
-            let index = (evaluate(member.property, env) as NumberValue).value;
+      const key = get_object_props(member).pop()!;
+      if (!key) {
+        throw throwError(
+          new InterpreterError(
+            "Invalid object key access: " + member.property.kind,
+          ),
+        );
+      }
 
-            if (typeof index != "number") throw throwError(new InterpreterError("Invalid list index"));
+      if (!obj.properties.has(key)) return MK_NULL();
 
-            if (index < 0)
-                index = list.value.length + index
+      const prop = obj.properties.get(key)!;
+      if (prop.type == "reactive") {
+        prop.value = evaluate((prop as ReactiveValue).node, env);
+      }
 
-            if (index < 0 || index >= list.value.length)
-                throw throwError(new InterpreterError(`Index out of range. Index must be between ${(-list.value.length)} and ${(list.value.length - 1)}`));
-
-            return list.value[index]
-        }
-            
-        case "class-instance": {
-            const instance = object as ClassInstanceValue;
-            
-            const key = get_object_props(member).pop()!;
-            if (!key) throw throwError(new InterpreterError('Invalid object key access: ' + member.property.kind));
-
-            const obj = instance.value as ObjectValue;            
-            if (obj.properties.has(key)) return obj.properties.get(key)!;
-
-            throw throwError(new InterpreterError(`Member '${key}' does not exist on class '${instance.name}'`));
-        }
-
-        default:
-            console.error("Invalid member expression on type: " + object.type)
-            break; 
+      return prop;
     }
-    
-    return MK_NULL()
+
+    case "list": {
+      if (!member.computed) {
+        throw throwError(
+          new InterpreterError("Invalid list access. Expected computed access"),
+        );
+      }
+
+      const list = object as ListValue;
+      let index = (evaluate(member.property, env) as NumberValue).value;
+
+      if (typeof index != "number") {
+        throw throwError(new InterpreterError("Invalid list index"));
+      }
+
+      if (index < 0) index = list.value.length + index;
+
+      if (index < 0 || index >= list.value.length) {
+        throw throwError(
+          new InterpreterError(
+            `Index out of range. Index must be between ${-list.value
+              .length} and ${list.value.length - 1}`,
+          ),
+        );
+      }
+
+      return list.value[index];
+    }
+
+    case "class-instance": {
+      const instance = object as ClassInstanceValue;
+
+      const key = get_object_props(member).pop()!;
+      if (!key) {
+        throw throwError(
+          new InterpreterError(
+            "Invalid object key access: " + member.property.kind,
+          ),
+        );
+      }
+
+      const obj = instance.value as ObjectValue;
+      if (obj.properties.has(key)) {
+        const value = obj.properties.get(key)!;
+
+        if (value.type == "reactive") {
+          return {
+            type: "reactive",
+            value: evaluate(
+              (value as ReactiveValue).node,
+              instance.environment,
+            ),
+            node: (value as ReactiveValue).node,
+            name: (value as ReactiveValue).name,
+          } as ReactiveValue;
+        }
+
+        return value;
+      }
+
+      // Check if the property exists in the instance environment (e.g. private members or parameters accessed via 'this' inside the class)
+      // Since 'this' is a direct reference to the class instance, 'this.privateVar' should work if the property exists in the environment.
+      if (instance.environment.variables.has(key)) {
+        const value = instance.environment.variables.get(key)!;
+
+        if (value.type == "reactive") {
+          return {
+            type: "reactive",
+            value: evaluate(
+              (value as ReactiveValue).node,
+              instance.environment,
+            ),
+            node: (value as ReactiveValue).node,
+            name: (value as ReactiveValue).name,
+          } as ReactiveValue;
+        }
+
+        return value;
+      }
+
+      throw throwError(
+        new InterpreterError(
+          `Member '${key}' does not exist on class '${instance.name}'`,
+        ),
+      );
+    }
+
+    default:
+      console.error("Invalid member expression on type: " + object.type);
+      break;
+  }
+
+  return MK_NULL();
 }
 
 // Evaluates a call expression and returns its result
-export function evaluate_call_expression(call: CallExpression, env: Environment): RuntimeValue {
-    const args = call.args.map((arg: Expression) => evaluate(arg, env));
-    const fn = evaluate(call.caller, env);
+export function evaluate_call_expression(
+  call: CallExpression,
+  env: Environment,
+): RuntimeValue {
+  const args = call.args.map((arg: Expression) => evaluate(arg, env));
+  const fn = evaluate(call.caller, env);
 
-    if (fn.type == "native-function")
-        return (fn as NativeFunctionValue).call(args, call.line!, call.column!, env);;
-    
+  if (fn.type == "native-function") {
+    return (fn as NativeFunctionValue).call(
+      args,
+      call.line!,
+      call.column!,
+      env,
+    );
+  }
 
-    if (fn.type == "function") {
-        const func = fn as FunctionValue;
-        const scope = new Environment(func.declarationEnv);
+  if (fn.type == "function") {
+    const func = fn as FunctionValue;
+    const scope = new Environment(func.declarationEnv);
 
-        if (func.expectedArgs != 0 && func.expectedArgs != args.length) throw throwError(new InterpreterError("Invalid number of arguments. Expected " + func.expectedArgs + " but received " + args.length))
-        
-        for (let i = 0; i < func.parameters.length; i++) {
-            const varname = func.parameters[i];
-            scope.declareVar(varname, args[i], false);
-        }
-
-        let result: RuntimeValue = MK_NULL();
-        for (const statement of func.body) result = evaluate(statement, scope);
-
-        return result;
+    if (func.expectedArgs != 0 && func.expectedArgs != args.length) {
+      throw throwError(
+        new InterpreterError(
+          "Invalid number of arguments. Expected " +
+            func.expectedArgs +
+            " but received " +
+            args.length,
+        ),
+      );
     }
 
-    if (fn.type == "class") {
-        const cls = fn as ClassValue;
-        
-        const instanceEnv = new Environment(env);
-        instanceEnv.scopeType = "class-instance";
-        // Initializes the instance object properties and methods
-        const instance = new Map<string, RuntimeValue>();
-        const privateMembers = new Map<string, RuntimeValue>();
-
-        const parameters: Map<string, RuntimeValue> = new Map();
-
-        cls.parameters.forEach((param, index) => {
-            const arg = args[index] ? args[index] : MK_NULL();
-            instanceEnv.declareVar(param, arg, false);
-            parameters.set(param, arg);
-        });
-
-        let objThis = MK_OBJECT(new Map());
-        instanceEnv.declareVar("this", objThis, true);        
-
-        for (const member of cls.blocks.body) {
-            if (member.kind == "FunctionDeclaration") {
-                const func = member as FunctionDeclaration;
-                const fn_value = {
-                    type: "function",
-                    name: func.name,
-                    parameters: func.parameters,
-                    expectedArgs: func.expectedArgs,
-                    declarationEnv: env,
-                    body: func.body,
-                } as FunctionValue;
-
-                privateMembers.set(func.name, fn_value);
-                instanceEnv.declareVar(func.name, fn_value, true);
-            }
-            else if (member.kind == "VariableDeclaration") {
-                const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl, instanceEnv);
-                const name = (var_decl.assignee as Identifier).symbol;
-
-                privateMembers.set(name, var_value);
-            }
-        }
-
-        for (const member of cls.blocks.public) {
-            if (member.kind == "FunctionDeclaration") {
-                const func = member as FunctionDeclaration;
-                const fn_value = {
-                    type: "function",
-                    name: func.name,
-                    parameters: func.parameters,
-                    expectedArgs: func.expectedArgs,
-                    declarationEnv: instanceEnv,
-                    body: func.body,
-                } as FunctionValue;
-
-                instance.set(func.name, fn_value);
-                instanceEnv.declareVar(func.name, fn_value, true);
-            }
-            else if (member.kind == "VariableDeclaration") {
-                const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl, instanceEnv);
-
-                const name = (var_decl.assignee as Identifier).symbol;
-                instance.set(name, var_value);
-            }
-        }
-
-        for (const member of cls.blocks.private) {
-            if (member.kind == "FunctionDeclaration") {
-                const func = member as FunctionDeclaration;
-                const fn_value = {
-                    type: "function",
-                    name: func.name,
-                    parameters: func.parameters,
-                    expectedArgs: func.expectedArgs,
-                    declarationEnv: instanceEnv,
-                    body: func.body,
-                } as FunctionValue;
-
-                privateMembers.set(func.name, fn_value);
-                instanceEnv.declareVar(func.name, fn_value, true);
-            }
-            else if (member.kind == "VariableDeclaration") {
-                const var_decl = member as VariableDeclaration;
-                const var_value = evaluate(var_decl, instanceEnv);
-                const name = (var_decl.assignee as Identifier).symbol;
-
-                privateMembers.set(name, var_value);
-            }
-        }
-
-        objThis = MK_OBJECT(new Map([...parameters, ...instance, ...privateMembers]));
-        instanceEnv.assignVar("this", objThis, true);
-
-        // If an init method is defined, calls it
-        if (cls.init) {
-            const initFunc = cls.init as FunctionValue;
-            if(initFunc.parameters.length != 0) throw throwError(new InterpreterError("Class initializer 'init' cannot have parameters"))
-
-            initFunc.body.forEach(stmt => evaluate(stmt, instanceEnv));
-        }
-
-        return {
-            type: "class-instance",
-            name: cls.name,
-            value: MK_OBJECT(instance),
-            privateMembers: MK_OBJECT(privateMembers),
-            environment: instanceEnv,
-        } as ClassInstanceValue;
+    for (let i = 0; i < func.parameters.length; i++) {
+      const varname = func.parameters[i];
+      scope.declareVar(varname, args[i], false);
     }
 
-    throw throwError(new InterpreterError("Cannot call value that is not a function: " + JSON.stringify(fn)));
+    let result: RuntimeValue = MK_NULL();
+    for (const statement of func.body) {
+      result = evaluate(statement, scope);
+    }
+
+    return result;
+  }
+
+  if (fn.type == "class") {
+    const cls = fn as ClassValue;
+
+    const instanceEnv = new Environment();
+    instanceEnv.scopeType = "class-instance";
+    // Initializes the instance object properties and methods
+    const instance = new Map<string, RuntimeValue>();
+    const privateMembers = new Map<string, RuntimeValue>();
+
+    const parameters: Map<string, RuntimeValue> = new Map();
+
+    cls.parameters.forEach((param, index) => {
+      const arg = args[index] ? args[index] : MK_NULL();
+      instanceEnv.declareVar(param, arg, false);
+      parameters.set(param, arg);
+    });
+
+    const classInstance: ClassInstanceValue = {
+      type: "class-instance",
+      name: cls.name,
+      value: MK_OBJECT(instance),
+      privateMembers: MK_OBJECT(privateMembers),
+      environment: instanceEnv,
+      parameters: cls.parameters,
+    };
+
+    instanceEnv.declareVar("this", classInstance, true);
+
+    for (const member of cls.blocks.body) {
+      if (member.kind == "FunctionDeclaration") {
+        const func = member as FunctionDeclaration;
+        const fn_value = {
+          type: "function",
+          name: func.name,
+          parameters: func.parameters,
+          expectedArgs: func.expectedArgs,
+          declarationEnv: env,
+          body: func.body,
+        } as FunctionValue;
+
+        privateMembers.set(func.name, fn_value);
+        instanceEnv.declareVar(func.name, fn_value, true);
+      } else if (member.kind == "VariableDeclaration") {
+        const var_decl = member as VariableDeclaration;
+        const var_value = evaluate(var_decl, instanceEnv);
+        const name = (var_decl.assignee as Identifier).symbol;
+
+        privateMembers.set(name, var_value);
+      }
+    }
+
+    for (const member of cls.blocks.public) {
+      if (member.kind == "FunctionDeclaration") {
+        const func = member as FunctionDeclaration;
+        const fn_value = {
+          type: "function",
+          name: func.name,
+          parameters: func.parameters,
+          expectedArgs: func.expectedArgs,
+          declarationEnv: instanceEnv,
+          body: func.body,
+        } as FunctionValue;
+
+        instance.set(func.name, fn_value);
+        instanceEnv.declareVar(func.name, fn_value, true);
+      } else if (member.kind == "VariableDeclaration") {
+        const var_decl = member as VariableDeclaration;
+        const var_value = evaluate(var_decl, instanceEnv);
+
+        const name = (var_decl.assignee as Identifier).symbol;
+        instance.set(name, var_value);
+      }
+    }
+
+    for (const member of cls.blocks.private) {
+      if (member.kind == "FunctionDeclaration") {
+        const func = member as FunctionDeclaration;
+        const fn_value = {
+          type: "function",
+          name: func.name,
+          parameters: func.parameters,
+          expectedArgs: func.expectedArgs,
+          declarationEnv: instanceEnv,
+          body: func.body,
+        } as FunctionValue;
+
+        privateMembers.set(func.name, fn_value);
+        instanceEnv.declareVar(func.name, fn_value, true);
+      } else if (member.kind == "VariableDeclaration") {
+        const var_decl = member as VariableDeclaration;
+        const var_value = evaluate(var_decl, instanceEnv);
+        const name = (var_decl.assignee as Identifier).symbol;
+
+        privateMembers.set(name, var_value);
+      }
+    }
+
+    // If an init method is defined, calls it
+    if (cls.init) {
+      const initFunc = cls.init as FunctionValue;
+      if (initFunc.parameters.length != 0) {
+        throw throwError(
+          new InterpreterError(
+            "Class initializer 'init' cannot have parameters",
+          ),
+        );
+      }
+
+      initFunc.body.forEach((stmt) => evaluate(stmt, instanceEnv));
+    }
+
+    return classInstance;
+  }
+
+  throw throwError(
+    new InterpreterError(
+      "Cannot call value that is not a function: " + JSON.stringify(fn),
+    ),
+  );
 }
 
 // Evaluates a list expression and returns its result
-export const evaluate_list_expression = (list: ListLiteral, env: Environment): RuntimeValue => (
-    { type: "list", value: list.values.map(value => evaluate(value, env)) } as ListValue
-)
+export const evaluate_list_expression = (
+  list: ListLiteral,
+  env: Environment,
+): RuntimeValue =>
+  ({
+    type: "list",
+    value: list.values.map((value) => evaluate(value, env)),
+  }) as ListValue;
 
 // Evaluates a ternary expression and returns its result
-export const evaluate_ternary_expression = (node: TernaryExpression, env: Environment): RuntimeValue => (
-    evaluate(node.condition, env)
-        ? evaluate(node.left, env)
-        : evaluate(node.right, env)
-)
+export const evaluate_ternary_expression = (
+  node: TernaryExpression,
+  env: Environment,
+): RuntimeValue =>
+  evaluate(node.condition, env)
+    ? evaluate(node.left, env)
+    : evaluate(node.right, env);
 
 // Evaluates a choose expression and returns its result
-export function evaluate_choose_expression(node: ChooseExpression, env: Environment): RuntimeValue {
-    // Evaluates the subject expression
-    const subject = evaluate(node.subject, env);
-    
-    // Declares a temporary environment for the choose expression
-    const tempEnv = new Environment(env);
-    // If a temporary variable is defined, assigns the subject to it
-    if (node.tempVariable) tempEnv.declareVar(node.tempVariable.symbol, subject, false);
-    
-    let conditionsMet = false;
-    const results: RuntimeValue[] = [];
-    for (const chooseCase of node.cases) {
-        if (chooseCase.conditions) {
-            // If the case has conditions, evaluates them and checks if any of them is true
-            const conditions = chooseCase.conditions.map((cond: Expression) => evaluate(cond, tempEnv));
-            if (conditions.some((cond: RuntimeValue, index: number) => equals(cond, subject) || ((chooseCase.conditions![index].kind == "BinaryExpression" || chooseCase.conditions![index].kind == "LogicalExpression") && (cond as BoolValue).value))) {
-                conditionsMet = true;
+export function evaluate_choose_expression(
+  node: ChooseExpression,
+  env: Environment,
+): RuntimeValue {
+  // Evaluates the subject expression
+  const subject = evaluate(node.subject, env);
 
-                // If any of the conditions is true, evaluates the case's body and returns its result
-                if(node.chooseAll) results.push(evaluate(chooseCase.body as Expression, tempEnv));
-                else return evaluate(chooseCase.body as Expression, tempEnv);
-            }
-        }
-    }
-    
-    if (node.defaultCase && !conditionsMet) {
-        // If no case matched and a default case exists, evaluates the default case's body
-        if (node.chooseAll) results.push(evaluate(node.defaultCase.body as Expression, tempEnv));
-        else return evaluate(node.defaultCase.body as Expression, tempEnv);
-    }
+  // Declares a temporary environment for the choose expression
+  const tempEnv = new Environment(env);
+  // If a temporary variable is defined, assigns the subject to it
+  if (node.tempVariable) {
+    tempEnv.declareVar(node.tempVariable.symbol, subject, false);
+  }
 
-    return MK_LIST(results);
+  let conditionsMet = false;
+  const results: RuntimeValue[] = [];
+  for (const chooseCase of node.cases) {
+    if (chooseCase.conditions) {
+      // If the case has conditions, evaluates them and checks if any of them is true
+      const conditions = chooseCase.conditions.map((cond: Expression) =>
+        evaluate(cond, tempEnv),
+      );
+      if (
+        conditions.some(
+          (cond: RuntimeValue, index: number) =>
+            equals(cond, subject) ||
+            ((chooseCase.conditions![index].kind == "BinaryExpression" ||
+              chooseCase.conditions![index].kind == "LogicalExpression") &&
+              (cond as BoolValue).value),
+        )
+      ) {
+        conditionsMet = true;
+
+        // If any of the conditions is true, evaluates the case's body and returns its result
+        if (node.chooseAll) {
+          results.push(evaluate(chooseCase.body as Expression, tempEnv));
+        } else return evaluate(chooseCase.body as Expression, tempEnv);
+      }
+    }
+  }
+
+  if (node.defaultCase && !conditionsMet) {
+    // If no case matched and a default case exists, evaluates the default case's body
+    if (node.chooseAll) {
+      results.push(evaluate(node.defaultCase.body as Expression, tempEnv));
+    } else return evaluate(node.defaultCase.body as Expression, tempEnv);
+  }
+
+  return MK_LIST(results);
 }

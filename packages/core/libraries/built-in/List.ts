@@ -1,211 +1,256 @@
 import Environment from "@core/runtime/environments.ts";
 import { evaluate } from "@core/runtime/interpreter.ts";
-import { type FunctionCall, type RuntimeValue, type ListValue, MK_NULL, MK_BOOL, type FunctionValue } from "@core/runtime/values.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
+import { build } from "@core/runtime/built-in/func_builder.ts";
+import {
+  type FunctionCall,
+  type RuntimeValue,
+  type ListValue,
+  MK_NULL,
+  MK_BOOL,
+  MK_LIST,
+  MK_NUMBER,
+  type FunctionValue,
+  MK_STRING,
+} from "@core/runtime/values.ts";
 import { handleError } from "@core/utils/errors_handler.ts";
 
-
 function throwError(error: string, line: number, column: number) {
-    throw handleError(new SyntaxError(error), line, column);
+  throw handleError(new SyntaxError(error), line, column);
 }
 
-const push: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
+function compare(a: RuntimeValue, b: RuntimeValue): number {
+  if (a.type == "number" && b.type == "number") return a.value - b.value;
+  else if (a.type == "string" && b.type == "string")
+    return a.value.localeCompare(b.value);
+  else return a.type == "number" ? -1 : 1;
+}
 
+const push: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "elem", type: "any" },
+  ],
+  (args, env) => {
     const list = args[0] as ListValue;
     const elem = args[1];
 
     list.value.push(elem);
 
-    if(!list.name) return list;
-    return env.assignVar(list.name!, list);
-};
+    if (!list.name) return list;
+    return env!.assignVar(list.name!, list);
+  },
+);
 
-const pop: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
+const pop: FunctionCall = build(
+  [{ name: "list", type: "list" }],
+  (args, env) => {
     const list = args[0] as ListValue;
     const value = list.value.pop();
 
-    env.assignVar(list.name!, list);
+    if (list.name) env!.assignVar(list.name!, list);
 
     if (value == undefined) return MK_NULL();
-
     return value;
-};
+  },
+);
 
-const shift: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
+const shift: FunctionCall = build(
+  [{ name: "list", type: "list" }],
+  (args, env) => {
     const list = args[0] as ListValue;
     const value = list.value.shift();
 
-    env.assignVar(list.name!, list);
+    if (list.name) env!.assignVar(list.name!, list);
 
     if (value == undefined) return MK_NULL();
-
     return value;
-};
+  },
+);
 
-const unshift: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
+const unshift: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "elem", type: "any" },
+  ],
+  (args, env) => {
     const list = args[0] as ListValue;
+    const elem = args[1];
 
-    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
-    list.value.unshift(args[1]);
+    list.value.unshift(elem);
 
-    return env.assignVar(list.name!, list);
-};
+    if (!list.name) return list;
+    return env!.assignVar(list.name!, list);
+  },
+);
 
-const slice: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    let start = 0;
-    if (args.length > 1)
-        if (args[1].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
-        else start = args[1].value;
-
-    let end = args[0].value.length;
-    if (args.length > 2)
-        if (args[2].type != "number") throw throwError("Invalid arguments: second argument must be a number", line, column);
-        else end = args[2].value;
-
+const slice: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "start", type: "number", optional: true },
+    { name: "end", type: "number", optional: true },
+  ],
+  (args) => {
     const list = args[0] as ListValue;
+    const start = args[1].type === "number" ? (args[1] as any).value : 0;
+    const end =
+      args[2].type === "number" ? (args[2] as any).value : list.value.length;
 
     return {
-        type: "list",
-        value: list.value.slice(start, end),
-        name: list.name,
+      type: "list",
+      value: list.value.slice(start, end),
+      name: list.name,
     } as ListValue;
-};
+  },
+);
 
-const contains: FunctionCall = (args: RuntimeValue[], line: number, column: number) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
+const contains: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "elem", type: "any" },
+  ],
+  (args) => {
     const list = args[0] as ListValue;
+    const target = args[1];
 
-    if (args.length < 2) throw throwError("Invalid arguments: two arguments are required", line, column);
     for (const value of list.value) {
-        if (value.type == args[1].type && value.value == args[1].value) return MK_BOOL(true);
+      if (value.type == target.type && value.value == (target as any).value)
+        return MK_BOOL(true);
     }
 
     return MK_BOOL(false);
-};
+  },
+);
 
-const reverse: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: argument must be a list", line, column);
-
+const reverse: FunctionCall = build(
+  [{ name: "list", type: "list" }],
+  (args, env) => {
     const list = args[0] as ListValue;
     list.value.reverse();
+    return env!.assignVar(list.name!, list);
+  },
+);
 
-    return env.assignVar(list.name!, list);
-};
-
-const filter: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
-
+const filter: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "fn", type: "function" },
+  ],
+  (args, env, line?, column?) => {
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
-    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
-    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
+    if (fn.parameters.length > 1)
+      throwError(
+        "Invalid function argument: function must have only one parameter",
+        line ?? 0,
+        column ?? 0,
+      );
+    if (fn.body.length > 1)
+      throwError(
+        "Invalid function argument: function must have only one expression in its body",
+        line ?? 0,
+        column ?? 0,
+      );
 
     const scope = new Environment(env);
-
     const varname = fn.parameters[0];
     scope.declareVar(varname, MK_NULL(), false);
 
     const values: RuntimeValue[] = [];
     for (let i = 0; i < list.value.length; i++) {
-        const value = list.value[i];
-        scope.assignVar(varname, value);
+      const value = list.value[i];
+      scope.assignVar(varname, value);
 
-        if (evaluate(fn.body[0], scope).value == true) values.push(value);
+      if ((evaluate(fn.body[0], scope) as any).value == true)
+        values.push(value);
     }
 
-    return {
-        type: "list",
-        value: values,
-        name: list.name,
-    } as ListValue;
-};
+    return { type: "list", value: values, name: list.name } as ListValue;
+  },
+);
 
-const map: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-    if (args[1].type != "function") throw throwError("Invalid arguments: second argument must be a function", line, column);
-
+const map: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    { name: "fn", type: "function" },
+  ],
+  (args, env, line?, column?) => {
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
-    if (fn.parameters.length > 1) throw throwError("Invalid function argument: function must have only one parameter", line, column);
-    if (fn.body.length > 1) throw throwError("Invalid function argument: function must have only one expression in its body", line, column);
+    if (fn.parameters.length > 1)
+      throwError(
+        "Invalid function argument: function must have only one parameter",
+        line ?? 0,
+        column ?? 0,
+      );
+    if (fn.body.length > 1)
+      throwError(
+        "Invalid function argument: function must have only one expression in its body",
+        line ?? 0,
+        column ?? 0,
+      );
 
     const scope = new Environment(env);
-
     const varname = fn.parameters[0];
     scope.declareVar(varname, MK_NULL(), false);
 
     const values: RuntimeValue[] = [];
     for (let i = 0; i < list.value.length; i++) {
-        const value = list.value[i];
-        scope.assignVar(varname, value);
+      const value = list.value[i];
+      scope.assignVar(varname, value);
 
-        const result: RuntimeValue = evaluate(fn.body[0], scope)
-        values.push(result ? result.value : list.value[i]); // If the function returns null, keep the original value
+      const result: RuntimeValue = evaluate(fn.body[0], scope);
+      values.push(result ? result.value : list.value[i]);
     }
 
-    return {
-        type: "list",
-        value: values,
-        name: list.name,
-    } as ListValue;
-};
+    return { type: "list", value: values, name: list.name } as ListValue;
+  },
+);
 
-const sort: FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => {
-    if (args[0].type != "list") throw throwError("Invalid arguments: first argument must be a list", line, column);
-
-    let inverted: boolean = false;
-    if (args.length > 1) {
-        if (args[1].type != "boolean") throw throwError("Invalid arguments: second argument must be a boolean", line, column);
-        inverted = args[1].value;
-    }
+const sort: FunctionCall = build(
+  [
+    { name: "list", type: "list" },
+    {
+      name: "inverted",
+      type: "boolean",
+      optional: true,
+      default: MK_BOOL(false),
+    },
+  ],
+  (args, env) => {
     const list = args[0] as ListValue;
+    const inverted = args[1].type == "boolean" ? (args[1] as any).value : false;
 
     for (let i = 0; i < list.value.length - 1; i++) {
-        for (let j = 0; j < list.value.length - i - 1; j++) {
-            const comp = compare(list.value[j], list.value[j + 1]);
-            if (inverted ? comp < 0 : comp > 0) {
-                const temp = list.value[j];
-                list.value[j] = list.value[j + 1];
-                list.value[j + 1] = temp;
-            }
+      for (let j = 0; j < list.value.length - i - 1; j++) {
+        const comp = compare(list.value[j], list.value[j + 1]);
+        if (inverted ? comp < 0 : comp > 0) {
+          const temp = list.value[j];
+          list.value[j] = list.value[j + 1];
+          list.value[j + 1] = temp;
         }
+      }
     }
 
-    return env.assignVar(list.name!, list);
-};
+    return env!.assignVar(list.name!, list);
+  },
+);
 
-function compare(a: RuntimeValue, b: RuntimeValue): number {
-    if (a.type == "number" && b.type == "number") return a.value - b.value;
-    else if (a.type == "string" && b.type == "string") return a.value.localeCompare(b.value);
-    else return a.type == "number" ? -1 : 1;
-}
-
-export default {
-    List: {
-        functions: {
-            push,
-            pop,
-            shift,
-            unshift,
-            slice,
-            contains,
-            reverse,
-            filter,
-            map,
-            sort
-        },
-        constants: {}
-    }
-};
+export default createLibrary(
+  "List",
+  {
+    push,
+    pop,
+    shift,
+    unshift,
+    slice,
+    contains,
+    reverse,
+    filter,
+    map,
+    sort,
+  },
+  {},
+);

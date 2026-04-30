@@ -1,17 +1,24 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "ES2022",           
-    "outDir": "dist",             
+    "target": "ES2022",
+    "outDir": "dist",
     "rootDir": "./packages",
-    "esModuleInterop": true,         
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./packages/*"],
       "@core/*": ["./packages/core/*"],
       "@cli/*": ["./packages/cli/*"],
-    }
+    },
   },
-  "include": ["./packages/**/*.ts"],           
-  "exclude": ["node_modules", "libraries", "gh3sp-lib", "test-libraries", "gh3sp-ide", "gh3sp-ext"]       
+  "include": ["./packages/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "libraries",
+    "gh3sp-lib",
+    "test-libraries",
+    "gh3sp-ide",
+    "gh3sp-ext",
+  ],
 }
