@@ -1,14 +1,14 @@
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { build, simple } from "@core/runtime/built-in/func_builder.ts";
-import { parse } from "@core/runtime/built-in/functions.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { build, simple } from "@core/runtime/built-in/func_builder";
+import { parse } from "@core/runtime/built-in/functions";
 import {
   MK_LIST,
   MK_STRING,
   RuntimeValue,
   type FunctionCall,
   type ListValue,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
 
 function throwError(error: string, line: number, column: number) {
   throw handleError(new SyntaxError(error), line, column);

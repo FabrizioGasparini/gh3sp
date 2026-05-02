@@ -1,15 +1,15 @@
-import { built_in_libraries } from "@core/runtime/built-in/libraries.ts";
-import { built_in_functions } from "@core/runtime/built-in/functions.ts";
-import { built_in_constants } from "@core/runtime/built-in/constants.ts";
-import { evaluate, throwError } from "@core/runtime/interpreter.ts";
+import { built_in_libraries } from "@core/runtime/built-in/libraries";
+import { built_in_functions } from "@core/runtime/built-in/functions";
+import { built_in_constants } from "@core/runtime/built-in/constants";
+import { evaluate, throwError } from "@core/runtime/interpreter";
 import {
   MK_NATIVE_FUNCTION,
   RuntimeValue,
   type ReactiveValue,
   type ClassInstanceValue,
   type ObjectValue,
-} from "@core/runtime/values.ts";
-import { InterpreterError } from "@core/utils/errors_handler.ts";
+} from "@core/runtime/values";
+import { InterpreterError } from "@core/utils/errors_handler";
 
 // Creates the global environment of the program
 export function createGlobalEnvironment() {
@@ -156,18 +156,6 @@ export default class Environment {
     const variable = this.resolve(varname).variables.get(
       varname,
     ) as RuntimeValue;
-
-    if (variable.type == "reactive")
-      return {
-        type: "reactive",
-        value: evaluate(
-          (variable as ReactiveValue).node,
-          this.resolve(varname),
-        ),
-        node: (variable as ReactiveValue).node,
-        name: (variable as ReactiveValue).name,
-      } as ReactiveValue;
-
     return variable;
   };
 

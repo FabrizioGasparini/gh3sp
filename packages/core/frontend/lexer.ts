@@ -1,4 +1,4 @@
-import { handleError, LexerError } from "@core/utils/errors_handler.ts";
+import { handleError, LexerError } from "@core/utils/errors_handler";
 
 export enum TokenType {
   // Literal Types
@@ -41,6 +41,7 @@ export enum TokenType {
 
   // Special Keywords
   Reactive,
+  Await,
 
   // Operators
   BinaryOperator,
@@ -112,6 +113,7 @@ const KEYWORDS: Record<string, TokenType> = {
   export: TokenType.Export,
 
   reactive: TokenType.Reactive,
+  await: TokenType.Await,
 };
 
 const singleCharTokens: Record<string, TokenType> = {

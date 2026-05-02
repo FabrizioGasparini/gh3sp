@@ -1,17 +1,22 @@
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { simple } from "@core/runtime/built-in/func_builder.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { simple } from "@core/runtime/built-in/func_builder";
 import {
   MK_OBJECT,
   type ObjectValue,
   MK_STRING,
   type RuntimeValue,
   type FunctionCall,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
-import { parse_object } from "@core/runtime/built-in/functions.ts";
-import type { StringValue } from "@core/runtime/values.ts";
-import type { NumberValue } from "@core/runtime/values.ts";
-import type { BoolValue } from "@core/runtime/values.ts";
+  CustomValue,
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
+import {
+  parse_object,
+  parse as runtimeParse,
+} from "@core/runtime/built-in/functions";
+import { getCustomTypeDescriptor } from "@core/runtime/custom_types";
+import type { StringValue } from "@core/runtime/values";
+import type { NumberValue } from "@core/runtime/values";
+import type { BoolValue } from "@core/runtime/values";
 
 function obj_to_properties(
   obj: object,
@@ -62,6 +67,22 @@ const parse: FunctionCall = simple(
 );
 
 const stringify: FunctionCall = simple(["object"], (obj: RuntimeValue) => {
+  // If custom and provides toJSON, use that
+  if (obj.type === "custom") {
+    const cv = obj as CustomValue;
+    const desc = getCustomTypeDescriptor(cv.name);
+    if (desc && desc.toJSON) {
+      const jsonVal = desc.toJSON(cv);
+      // If the returned value is an object, use parse_object to stringify it
+      if (jsonVal.type === "object") {
+        return MK_STRING(parse_object(jsonVal as ObjectValue));
+      }
+      // Otherwise use parse() to convert runtime value to JS primitive and JSON.stringify
+      const parsed = runtimeParse(jsonVal);
+      return MK_STRING(JSON.stringify(parsed));
+    }
+  }
+
   return MK_STRING(parse_object(obj as ObjectValue));
 });
 

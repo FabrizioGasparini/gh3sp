@@ -1,12 +1,12 @@
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { simple } from "@core/runtime/built-in/func_builder.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { simple } from "@core/runtime/built-in/func_builder";
 import {
   type FunctionCall,
   type RuntimeValue,
   MK_LIST,
   MK_STRING,
   ObjectValue,
-} from "@core/runtime/values.ts";
+} from "@core/runtime/values";
 
 const keys: FunctionCall = simple(["object"], (obj: RuntimeValue) => {
   const object = obj as ObjectValue;

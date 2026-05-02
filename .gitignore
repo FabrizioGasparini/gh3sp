@@ -12,3 +12,8 @@ main.gh3
 out/
 .vscode
 debugger-temp
+gh3sp-linux-arm64
+gh3sp-linux-x64
+gh3sp-macos-arm64
+gh3sp-macos-x64
+gh3sp-win-x64.exe

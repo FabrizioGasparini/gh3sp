@@ -13,10 +13,13 @@ import {
   ClassValue,
   ClassInstanceValue,
   MK_LIST,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
+  CustomValue,
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
+import { getCustomTypeDescriptor } from "@core/runtime/custom_types";
 import { question } from "readline-sync";
-import type Environment from "@core/runtime/environments.ts";
+import Environment from "@core/runtime/environments";
+import { evaluate } from "@core/runtime/interpreter";
 
 const throwError = (error: Error, line: number, column: number) => {
   throw handleError(error, line, column);
@@ -110,7 +113,9 @@ const float: FunctionCall = (
 
 // Returns the type of the given argument
 const type: FunctionCall = (args: RuntimeValue[]) => {
-  return MK_STRING(args[0].type);
+  return MK_STRING(
+    args[0].type == "custom" ? (args[0] as CustomValue).name : args[0].type,
+  );
 };
 
 // Prints the given arguments to the console
@@ -204,9 +209,23 @@ export function parse(node: RuntimeValue) {
       return "<built-in function '" + (node as NativeFunctionValue).name + "'>";
 
     case "class":
-      return "<class '" + (node as ClassValue).name + "'>";
+      return "<class '" + (node as ClassValue).name + "'";
     case "class-instance":
-      return "<instance of '" + (node as ClassInstanceValue).name + "'>";
+      return "<instance of '" + (node as ClassInstanceValue).name + "'";
+    case "custom": {
+      const cv = node as CustomValue;
+      const desc = getCustomTypeDescriptor(cv.name);
+      if (desc && desc.toString) {
+        const res = desc.toString(cv);
+        if (typeof res === "string") return res;
+        return parse(res as RuntimeValue);
+      }
+
+      if (cv.value && (cv.value as RuntimeValue).type === "object") {
+        return "<" + cv.name + " " + parse(cv.value) + ">";
+      }
+      return "<" + cv.name + ">";
+    }
 
     default:
       return node;
@@ -321,6 +340,52 @@ const unreactive: FunctionCall = (
   return env.assignVar(reactive.name, reactive.value, true);
 };
 
+// Spawn: run a function asynchronously (do not block current execution)
+const spawn: FunctionCall = (
+  args: RuntimeValue[],
+  line: number,
+  column: number,
+  env: Environment,
+) => {
+  if (args.length != 1)
+    throwError(
+      SyntaxError(
+        "Invalid number of arguments. Expected '1' argument but received '" +
+          args.length +
+          "'",
+      ),
+      line,
+      column,
+    );
+
+  const fn = args[0];
+  if (fn.type != "function")
+    throwError(
+      TypeError(
+        "Invalid argument type. Expected 'function' but received '" +
+          fn.type +
+          "'",
+      ),
+      line,
+      column,
+    );
+
+  // Run the function body asynchronously
+  (async () => {
+    try {
+      const f = fn as FunctionValue;
+      const scope = new Environment(f.declarationEnv);
+      // initialize params to null
+      for (const p of f.parameters) scope.declareVar(p, MK_NULL(), false);
+      for (const stmt of f.body) await evaluate(stmt, scope);
+    } catch (e) {
+      console.error("Error in spawned task:", e);
+    }
+  })();
+
+  return MK_NULL();
+};
+
 function range(
   args: RuntimeValue[],
   line: number,
@@ -407,4 +472,5 @@ export const built_in_functions: FunctionCall[] = [
   unreactive,
   range,
   sum,
+  spawn,
 ];

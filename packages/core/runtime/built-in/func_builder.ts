@@ -1,11 +1,11 @@
-import { handleError } from "@core/utils/errors_handler.ts";
-import Environment from "@core/runtime/environments.ts";
+import { handleError } from "@core/utils/errors_handler";
+import Environment from "@core/runtime/environments";
 import {
   type FunctionCall,
   type RuntimeValue,
   MK_LIST,
   MK_NULL,
-} from "@core/runtime/values.ts";
+} from "@core/runtime/values";
 
 const throwError = (error: Error | string, line: number, column: number) => {
   if (typeof error === "string") error = new SyntaxError(String(error));
@@ -52,7 +52,7 @@ export function build(
     env?: Environment,
     line?: number,
     column?: number,
-  ) => RuntimeValue,
+  ) => RuntimeValue | Promise<RuntimeValue>,
 ): FunctionCall {
   const minArgs = descriptors.filter((p) => !p.optional && !p.variadic).length;
   const hasVariadic = descriptors.some((p) => p.variadic);
@@ -164,7 +164,7 @@ export function build(
  */
 export function simple(
   types: (ParamType | { type: ParamType; optional?: boolean })[],
-  handler: (...args: any[]) => RuntimeValue,
+  handler: (...args: any[]) => RuntimeValue | Promise<RuntimeValue>,
 ): FunctionCall {
   const descriptors: ParamDescriptor[] = types.map((t, idx) => {
     if (typeof t === "string") return { name: `arg${idx}`, type: t };

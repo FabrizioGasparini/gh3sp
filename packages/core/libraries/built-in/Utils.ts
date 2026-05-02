@@ -1,6 +1,6 @@
-import Environment from "@core/runtime/environments.ts";
-import { evaluate } from "@core/runtime/interpreter.ts";
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
+import Environment from "@core/runtime/environments";
+import { evaluate } from "@core/runtime/interpreter";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
 import {
   type FunctionCall,
   type RuntimeValue,
@@ -12,10 +12,11 @@ import {
   MK_OBJECT,
   ListValue,
   ObjectValue,
-  ClassInstanceValue,
   FunctionValue,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
+  CustomValue,
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
+import { getCustomTypeDescriptor } from "@core/runtime/custom_types";
 
 function throwError(error: string, line: number, column: number) {
   throw handleError(new SyntaxError(error), line, column);
@@ -41,6 +42,24 @@ function deepClone(value: RuntimeValue): RuntimeValue {
       const props = new Map<string, RuntimeValue>();
       for (const [k, v] of obj.properties.entries()) props.set(k, deepClone(v));
       return MK_OBJECT(props);
+    }
+    case "custom": {
+      const cv = value as CustomValue;
+      const desc = getCustomTypeDescriptor(cv.name);
+      if (desc && desc.clone) return desc.clone(cv);
+      // fallback: clone underlying value if it's an object
+      if (cv.value && (cv.value as RuntimeValue).type === "object") {
+        const obj = cv.value as ObjectValue;
+        const props = new Map<string, RuntimeValue>();
+        for (const [k, v] of obj.properties.entries())
+          props.set(k, deepClone(v));
+        return {
+          type: "custom",
+          name: cv.name,
+          value: MK_OBJECT(props),
+        } as CustomValue;
+      }
+      return value;
     }
     // For functions, native-functions, classes and class-instances we keep references
     default:
@@ -266,7 +285,7 @@ const mergeFn: FunctionCall = (
 };
 
 // reduce(list, fn(acc, cur), initial?)
-const reduceFn: FunctionCall = (
+const reduceFn: FunctionCall = async (
   args: RuntimeValue[],
   line: number,
   column: number,
@@ -301,7 +320,7 @@ const reduceFn: FunctionCall = (
     if (fn.parameters.length > 0) scope.assignVar(fn.parameters[0], acc);
     if (fn.parameters.length > 1) scope.assignVar(fn.parameters[1], v);
 
-    const res = evaluate(fn.body[0], scope);
+    const res = await evaluate(fn.body[0], scope);
     acc = res;
   }
 

@@ -1,10 +1,10 @@
-import type Environment from "@core/runtime/environments.ts";
-import { compileLibrary } from "@core/libraries/index.ts";
+import type Environment from "@core/runtime/environments";
+import { compileLibrary } from "@core/libraries/index";
 import {
   handleError,
   ParserError,
   ImportError,
-} from "@core/utils/errors_handler.ts";
+} from "@core/utils/errors_handler";
 import {
   CallExpression,
   CompoundAssignmentExpression,
@@ -36,8 +36,9 @@ import {
   MemberExpression,
   FunctionDeclaration,
   ClassDeclaration,
-} from "@core/frontend/ast.ts";
-import { tokenize, Token, TokenType } from "@core/frontend/lexer.ts";
+  AwaitExpression,
+} from "@core/frontend/ast";
+import { tokenize, Token, TokenType } from "@core/frontend/lexer";
 
 export default class Parser {
   // Declares a list of Tokens
@@ -1296,7 +1297,7 @@ export default class Parser {
     return left;
   }
 
-  // Returns a logical NOT expression
+  // Returns a logical NOT expression or an await expression
   private parse_logical_not_expression(): Expression {
     if (
       (this.at().type == TokenType.LogicOperator && this.at().value == "!") ||
@@ -1313,6 +1314,18 @@ export default class Parser {
         line: this.currentLine,
         column: this.currentColumn,
       } as LogicalExpression;
+    }
+
+    // await operator (unary)
+    if (this.at().type == TokenType.Await) {
+      this.eat(); // consume 'await'
+      const expr = this.parse_nullish_coalescing_expression();
+      return {
+        kind: "AwaitExpression",
+        expression: expr,
+        line: this.currentLine,
+        column: this.currentColumn,
+      } as AwaitExpression;
     }
 
     return this.parse_nullish_coalescing_expression();

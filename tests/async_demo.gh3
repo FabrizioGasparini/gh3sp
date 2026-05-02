@@ -1,0 +1,62 @@
+# Async demo for Gh3sp
+# Shows Time.sleepAsync, Promise values, await semantics, user functions with await
+
+print("=== Async demo start ===")
+
+# mark start time
+let t0 = Time.now()
+print("start ts:")
+print(t0)
+
+# Start two sleeps concurrently (non-blocking)
+let p1 = Time.sleepAsync(500)
+print("started p1 (500ms)")
+let p2 = Time.sleepAsync(300)
+print("started p2 (300ms)")
+
+# Now await the shorter one first, then the longer one
+print("awaiting p2 first...")
+await p2
+print("p2 finished")
+
+print("awaiting p1 now...")
+await p1
+print("p1 finished")
+
+let t1 = Time.now()
+print("elapsed ms:")
+print(t1 - t0)
+
+# A helper that returns a PromiseValue (factory style)
+fn makeSleep(ms) => Time.sleepAsync(ms)
+
+let q1 = makeSleep(250)
+let q2 = makeSleep(150)
+print("started q1(250) and q2(150)")
+
+# await q2 then q1
+await q2
+print("q2 done")
+await q1
+print("q1 done")
+
+# A user-function that itself uses await internally
+fn delayedAdd(a, b) {
+  let p = Time.sleepAsync(200)
+  await p
+  a + b
+}
+
+print("delayedAdd(5, 7) =>")
+print(delayedAdd(5, 7))
+
+# awaiting a non-promise value returns the value itself
+let x = 42
+print("await non-promise x =>")
+print(await x)
+
+# Time.now is synchronous and returns a number
+print("Time.now() immediate =>")
+print(Time.now())
+
+print("=== Async demo end ===")

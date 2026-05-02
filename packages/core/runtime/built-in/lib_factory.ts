@@ -1,4 +1,4 @@
-import { type FunctionCall, type RuntimeValue } from "@core/runtime/values.ts";
+import { type FunctionCall, type RuntimeValue } from "@core/runtime/values";
 
 // Simple helper to create a library default export shape
 export function createLibrary(name: string, functions: Record<string, FunctionCall>, constants: Record<string, RuntimeValue> = {}) {

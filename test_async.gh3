@@ -1,0 +1,18 @@
+print("async test start")
+let t0 = Time.now()
+print(t0)
+print("sleeping 200ms...")
+await Time.sleepAsync(200)
+print("woke up")
+let t1 = Time.now()
+print(t1)
+print("duration (ms): ")
+print(t1 - t0)
+
+# Date tests
+let d = Time.today()
+print(type(d))
+print(d.year)
+d.year = 2030
+print(d.year)
+print(d.toISO())

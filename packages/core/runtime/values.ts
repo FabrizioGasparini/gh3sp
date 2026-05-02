@@ -1,140 +1,183 @@
-import { Statement, type Expression } from "@core/frontend/ast.ts";
-import Environment from "@core/runtime/environments.ts";
+import { Statement, type Expression } from "@core/frontend/ast";
+import Environment from "@core/runtime/environments";
 
 // List of types that every value can have
-export type ValueType = "null" | "number" | "boolean" | "string" | "object" | "class" | "class-instance" | "native-function" | "list" | "function" | "reactive";
+export type ValueType =
+  | "null"
+  | "number"
+  | "boolean"
+  | "string"
+  | "object"
+  | "class"
+  | "class-instance"
+  | "native-function"
+  | "list"
+  | "function"
+  | "reactive"
+  | "custom" // custom types defined by libraries
+  | "promise"; // promise-wrapped runtime values
 
 // Default value
 export interface RuntimeValue {
-    type: ValueType;
-    // deno-lint-ignore no-explicit-any
-    value: any;
+  type: ValueType;
+  // deno-lint-ignore no-explicit-any
+  value: any;
 }
 
 // Null value
 export interface NullValue extends RuntimeValue {
-    type: "null";
-    value: null;
+  type: "null";
+  value: null;
 }
 // Returns a null value
 export function MK_NULL() {
-    return { type: "null", value: null } as NullValue;
+  return { type: "null", value: null } as NullValue;
 }
 
 // Number value
 export interface NumberValue extends RuntimeValue {
-    type: "number";
-    value: number;
+  type: "number";
+  value: number;
 }
 // Returns a number value from a given number
 export function MK_NUMBER(n = 0) {
-    return { type: "number", value: n } as NumberValue;
+  return { type: "number", value: n } as NumberValue;
 }
 
 // String value
 export interface StringValue extends RuntimeValue {
-    type: "string";
-    value: string;
+  type: "string";
+  value: string;
 }
 // Returns a string value from a given string
 export function MK_STRING(s = "") {
-    return { type: "string", value: s } as StringValue;
+  return { type: "string", value: s } as StringValue;
 }
 
 // String value
 export interface BoolValue extends RuntimeValue {
-    type: "boolean";
-    value: boolean;
+  type: "boolean";
+  value: boolean;
 }
 // Returns a bool value from a given boolean
 export function MK_BOOL(b = false) {
-    return { type: "boolean", value: b } as BoolValue;
+  return { type: "boolean", value: b } as BoolValue;
 }
 
 // Object value
 export interface ObjectValue extends RuntimeValue {
-    type: "object";
-    properties: Map<string, RuntimeValue>;
-    native: boolean;
+  type: "object";
+  properties: Map<string, RuntimeValue>;
+  native: boolean;
 }
 // Returns an object value from a given map
 export function MK_OBJECT(props: Map<string, RuntimeValue>) {
-    return { type: "object", properties: props, native: true } as ObjectValue;
+  return { type: "object", properties: props, native: true } as ObjectValue;
 }
 
 // List value
 export interface ListValue extends RuntimeValue {
-    type: "list";
-    value: RuntimeValue[];
-    name: string | null;
+  type: "list";
+  value: RuntimeValue[];
+  name: string | null;
 }
 
 // Returns a list value from a given array of runtime values
 export function MK_LIST(values: RuntimeValue[]) {
-    return { type: "list", value: values, name: null } as ListValue;
+  return { type: "list", value: values, name: null } as ListValue;
 }
 
-// Function Call
-export type FunctionCall = (args: RuntimeValue[], line: number, column: number, env: Environment) => RuntimeValue;
+// Function Call - can be async (return Promise<RuntimeValue>)
+export type FunctionCall = (
+  args: RuntimeValue[],
+  line: number,
+  column: number,
+  env: Environment,
+) => RuntimeValue | Promise<RuntimeValue>;
 // Returns a native function value from a given function call
 export function MK_NATIVE_FUNCTION(call: FunctionCall) {
-    return { type: "native-function", call, name: call.name } as NativeFunctionValue;
+  return {
+    type: "native-function",
+    call,
+    name: call.name,
+  } as NativeFunctionValue;
 }
 
 // Native function value
 export interface NativeFunctionValue extends RuntimeValue {
-    type: "native-function";
-    call: FunctionCall;
-    name: string;
+  type: "native-function";
+  call: FunctionCall;
+  name: string;
+}
+
+// Promise value
+export interface PromiseValue extends RuntimeValue {
+  type: "promise";
+  promise: Promise<RuntimeValue>;
+}
+
+export function MK_PROMISE(p: Promise<RuntimeValue>) {
+  return { type: "promise", promise: p } as PromiseValue;
 }
 
 // Function value
 export interface FunctionValue extends RuntimeValue {
-    type: "function";
-    name: string;
-    parameters: string[];
-    expectedArgs: number;
-    declarationEnv: Environment;
-    body: Statement[];
+  type: "function";
+  name: string;
+  parameters: string[];
+  expectedArgs: number;
+  declarationEnv: Environment;
+  body: Statement[];
 }
 
 export interface ClassValue extends RuntimeValue {
-    type: "class";
-    name: string;
-    parameters: string[];
-    blocks: Record<string, Statement[]>;
-    init: FunctionValue | null;
+  type: "class";
+  name: string;
+  parameters: string[];
+  blocks: Record<string, Statement[]>;
+  init: FunctionValue | null;
 }
 
 export interface ClassInstanceValue extends RuntimeValue {
-    type: "class-instance";
-    name: string;
-    parameters: string[];
-    value: ObjectValue; // public members
-    privateMembers: ObjectValue; // private members
-    environment: Environment;
+  type: "class-instance";
+  name: string;
+  parameters: string[];
+  value: ObjectValue; // public members
+  privateMembers: ObjectValue; // private members
+  environment: Environment;
 }
 
 // Reactive value
 export interface ReactiveValue extends RuntimeValue {
-    type: "reactive";
-    name: string;
-    node: Expression;
-    value: RuntimeValue;
+  type: "reactive";
+  name: string;
+  node: Expression;
+  value: RuntimeValue;
 }
 
+// Custom value (defined by libraries)
+export interface CustomValue extends RuntimeValue {
+  type: "custom";
+  name: string; // e.g. "Date"
+  value: RuntimeValue; // underlying runtime value (often an ObjectValue)
+}
+
+// Creates a custom runtime value
+export function MK_CUSTOM(name: string, value: RuntimeValue) {
+  return { type: "custom", name, value } as CustomValue;
+}
 
 // Loop Signals
 export type SignalType = "break" | "continue";
 
 export interface Signal {
-    type: SignalType;
+  type: SignalType;
 }
 
 export interface BreakSignal extends Signal {
-    type: "break";
+  type: "break";
 }
 
 export interface ContinueSignal extends Signal {
-    type: "continue";
+  type: "continue";
 }

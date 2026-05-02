@@ -1,7 +1,7 @@
-import Environment from "@core/runtime/environments.ts";
-import { evaluate } from "@core/runtime/interpreter.ts";
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { build } from "@core/runtime/built-in/func_builder.ts";
+import Environment from "@core/runtime/environments";
+import { evaluate } from "@core/runtime/interpreter";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { build } from "@core/runtime/built-in/func_builder";
 import {
   type FunctionCall,
   type RuntimeValue,
@@ -12,8 +12,8 @@ import {
   MK_NUMBER,
   type FunctionValue,
   MK_STRING,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
 
 function throwError(error: string, line: number, column: number) {
   throw handleError(new SyntaxError(error), line, column);
@@ -136,7 +136,7 @@ const filter: FunctionCall = build(
     { name: "list", type: "list" },
     { name: "fn", type: "function" },
   ],
-  (args, env, line?, column?) => {
+  async (args, env, line?, column?) => {
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
@@ -162,8 +162,8 @@ const filter: FunctionCall = build(
       const value = list.value[i];
       scope.assignVar(varname, value);
 
-      if ((evaluate(fn.body[0], scope) as any).value == true)
-        values.push(value);
+      const test = (await evaluate(fn.body[0], scope)) as RuntimeValue;
+      if (test && test.value == true) values.push(value);
     }
 
     return { type: "list", value: values, name: list.name } as ListValue;
@@ -175,7 +175,7 @@ const map: FunctionCall = build(
     { name: "list", type: "list" },
     { name: "fn", type: "function" },
   ],
-  (args, env, line?, column?) => {
+  async (args, env, line?, column?) => {
     const list = args[0] as ListValue;
     const fn = args[1] as FunctionValue;
 
@@ -201,7 +201,7 @@ const map: FunctionCall = build(
       const value = list.value[i];
       scope.assignVar(varname, value);
 
-      const result: RuntimeValue = evaluate(fn.body[0], scope);
+      const result: RuntimeValue = await evaluate(fn.body[0], scope);
       values.push(result ? result.value : list.value[i]);
     }
 

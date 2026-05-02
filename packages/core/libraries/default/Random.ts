@@ -1,11 +1,11 @@
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { build, simple } from "@core/runtime/built-in/func_builder.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { build, simple } from "@core/runtime/built-in/func_builder";
 import {
   MK_NUMBER,
   RuntimeValue,
   type FunctionCall,
-} from "@core/runtime/values.ts";
-import { handleError } from "@core/utils/errors_handler.ts";
+} from "@core/runtime/values";
+import { handleError } from "@core/utils/errors_handler";
 
 function makeRandomNumber(
   min: number,

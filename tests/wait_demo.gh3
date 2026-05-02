@@ -1,0 +1,18 @@
+# Wait demo: mimic JS async function behavior using spawn to run async function without blocking
+
+# Define an async-like function (uses await inside)
+fn test() {
+  print("1) Prima dell'await")
+
+  # call Time.wait (native promise) and await it
+  let result = await Time.wait(1000)
+
+  print("2) Dopo l'await, result:")
+  print(result)
+}
+
+# Run test in background and continue immediately
+spawn(test)
+
+# This should execute immediately, before the awaited part in test finishes
+print("3) Fuori dalla funzione async")

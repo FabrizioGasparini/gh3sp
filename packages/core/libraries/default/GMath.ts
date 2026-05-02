@@ -1,12 +1,12 @@
-import { createLibrary } from "@core/runtime/built-in/lib_factory.ts";
-import { simple } from "@core/runtime/built-in/func_builder.ts";
+import { createLibrary } from "@core/runtime/built-in/lib_factory";
+import { simple } from "@core/runtime/built-in/func_builder";
 import {
   MK_NUMBER,
   MK_STRING,
   type FunctionCall,
   type RuntimeValue,
-} from "@core/runtime/values.ts";
-import { handleError, MathError } from "@core/utils/errors_handler.ts";
+} from "@core/runtime/values";
+import { handleError, MathError } from "@core/utils/errors_handler";
 
 // sqrt(n)
 const sqrt: FunctionCall = simple(

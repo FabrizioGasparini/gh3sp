@@ -3,21 +3,21 @@ import {
   type RuntimeValue,
   MK_NATIVE_FUNCTION,
   MK_OBJECT,
-} from "@core/runtime/values.ts";
-import Random from "@core/libraries/default/Random.ts";
-import GMath from "@core/libraries/default/GMath.ts";
-import JSON from "@core/libraries/default/JSON.ts";
-import List from "@core/libraries/built-in/List.ts";
-import String from "@core/libraries/built-in/String.ts";
-import ObjectLib from "@core/libraries/built-in/Object.ts";
-import Utils from "@core/libraries/built-in/Utils.ts";
-import MyMath from "@core/libraries/built-in/MyMath.ts";
+} from "@core/runtime/values";
+import Random from "@core/libraries/default/Random";
+import GMath from "@core/libraries/default/GMath";
+import JSON from "@core/libraries/default/JSON";
+import List from "@core/libraries/built-in/List";
+import String from "@core/libraries/built-in/String";
+import ObjectLib from "@core/libraries/built-in/Object";
+import Utils from "@core/libraries/built-in/Utils";
+import Time from "@core/libraries/built-in/Time";
 
 // List of all the libraries which are 'default', so the just need to be imported to be used
 export const default_libraries = { GMath, Random, JSON };
 
 // Parses the 'built-in' libraries
-const libraries = [List, String, ObjectLib, Utils, MyMath];
+const libraries = [List, String, ObjectLib, Utils, Time];
 const output_libraries = [];
 for (const lib of libraries) {
   for (const [name, obj] of Object.entries(lib)) {
